@@ -438,7 +438,7 @@ g_variant_get_double (GVariant *value)
 
 const char *
 g_variant_get_string (GVariant *value,
-                      int      *length)
+                      gsize    *length)
 {
   g_assert (g_variant_matches (value, G_SIGNATURE_STRING) ||
             g_variant_matches (value, G_SIGNATURE_OBJECT_PATH) ||

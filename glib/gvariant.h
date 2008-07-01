@@ -93,7 +93,7 @@ guint64         g_variant_get_uint64      (GVariant        *value);
 gint64          g_variant_get_int64       (GVariant        *value);
 gdouble         g_variant_get_double      (GVariant        *value);
 const gchar    *g_variant_get_string      (GVariant        *value,
-                                           int             *length);
+                                           gsize           *length);
 gchar          *g_variant_dup_string      (GVariant        *value,
                                            int             *length);
 GVariant       *g_variant_get_variant     (GVariant        *value);
