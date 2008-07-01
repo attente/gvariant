@@ -13,8 +13,8 @@ fi
 
 gtkdocize --docdir docs/reference
 libtoolize --automake
-aclocal-1.9
-automake-1.9 --add-missing --foreign
+aclocal
+automake --add-missing --foreign
 autoconf
 
 CFLAGS=${CFLAGS=-ggdb -Werror}
