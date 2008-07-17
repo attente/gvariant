@@ -516,7 +516,7 @@ g_variant_builder_add_value (GVariantBuilder *builder,
                              GVariant        *value)
 {
   GSignature signature = g_variant_get_signature (value);
-  GError *error;
+  GError *error = NULL;
 
   if (G_UNLIKELY (!g_variant_builder_check_add (builder,
                                                 g_signature_type (signature),
@@ -578,7 +578,7 @@ g_variant_builder_open (GVariantBuilder *parent,
                         GSignature       signature)
 {
   GVariantBuilder *child;
-  GError *error;
+  GError *error = NULL;
 
   if (G_UNLIKELY (!g_variant_builder_check_add (parent, type,
                                                 signature, &error)))
@@ -674,9 +674,9 @@ g_variant_builder_new (GSignatureType type,
 GVariant *
 g_variant_builder_end (GVariantBuilder *builder)
 {
+  GError *error = NULL;
   GSVHelper *helper;
   GVariant *value;
-  GError *error;
 
   if (G_UNLIKELY (!g_variant_builder_check_end (builder, &error)))
     g_error ("g_variant_builder_end: %s", error->message);
@@ -871,13 +871,13 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
         }
 
     case G_SIGNATURE_TYPE_DICT_ENTRY:
-      if (builder->offset == 2)
+      if (builder->offset > 1)
         {
           g_set_error (error, 0, 0,
                        "a dictionary entry may have only a key and a value");
           return FALSE;
         }
-      else if (builder->offset == 1)
+      else if (builder->offset == 0)
         {
           if (!g_signature_type_is_basic (type))
             {

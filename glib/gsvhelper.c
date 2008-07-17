@@ -187,7 +187,7 @@ struct_helper_new (GSignature signature)
     helper->n_members = 2;
   helper->members = g_slice_alloc (sizeof (MemberInfo) * helper->n_members);
 
-  item = g_signature_open_blindly (signature);
+  item = g_signature_first (signature);
   while (item)
     {
       gssize item_fixed_size;

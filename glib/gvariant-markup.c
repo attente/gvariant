@@ -159,6 +159,7 @@ g_variant_markup_print (GVariant *value,
         g_string_append (string, "<dictionary-entry>");
         g_variant_markup_newline (string, newlines);
 
+        g_variant_iter_init (&iter, value);
         while ((element = g_variant_iter_next (&iter)))
           {
             g_variant_markup_print (element, string,
@@ -168,6 +169,8 @@ g_variant_markup_print (GVariant *value,
 
         g_variant_markup_indent (string, indentation);
         g_string_append (string, "</dictionary-entry>");
+
+        break;
       }
 
     case G_SIGNATURE_TYPE_STRING:

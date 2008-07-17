@@ -579,7 +579,7 @@ g_signature_first (GSignature signature)
 {
   const char *signature_str = (const char *) signature;
 
-  g_signature_assert (signature, STRUCT);
+  g_assert (*signature_str == '{' || *signature_str == '(');
 
   signature_str++;
 
