@@ -27,13 +27,13 @@ g_svariant_determine_size (gsize    content_end,
   if (!non_zero && content_end == 0)
     return 0;
 
-  if (content_end + offsets <= G_MAXINT8)
+  if (content_end + offsets <= G_MAXUINT8)
     return content_end + offsets;
 
-  if (content_end + offsets * 2 <= G_MAXINT16)
+  if (content_end + offsets * 2 <= G_MAXUINT16)
     return content_end + offsets * 2;
 
-  if (content_end + offsets * 4 <= G_MAXINT32)
+  if (content_end + offsets * 4 <= G_MAXUINT32)
     return content_end + offsets * 4;
 
   return content_end + offsets * 8;
@@ -58,7 +58,7 @@ g_svariant_determine_size (gsize    content_end,
       gsize integer;                                            \
     } tmpvalue;                                                 \
                                                                 \
-    bytes= container.data + container.size;                     \
+    bytes = container.data + container.size;                    \
     tmpvalue.integer = init_val;                                \
                                                                 \
     if (container.size == 0) { zero_case }                      \
@@ -129,6 +129,32 @@ g_svariant_array_length (GSVariant  container,
                });
 
   return TRUE;
+}
+
+static void
+g_variant_serialiser_sanity_check (GSVariant container,
+                                   gsize     offset,
+                                   gsize     n_items)
+{
+  check_cases (0,
+               {
+                 if (offset)
+                   {
+                     g_error ("when serialising a zero-size container, %d "
+                              "bytes were written", offset);
+                   }
+               },
+               {
+                 if (offset + n_items * offset_size != container.size)
+                   {
+                     g_error ("when serialising a container of size %d "
+                              "(offset size %d) %d bytes were used by "
+                              "children and %d bytes by %d offsets (total "
+                              "of %d bytes).", container.size, offset_size,
+                              offset, n_items * offset_size, n_items,
+                              offset + n_items * offset_size);
+                   }
+               },);
 }
 
 static gsize
@@ -257,7 +283,7 @@ g_svariant_n_children (GSVariant container)
       g_assert_not_reached ();
   }
 
-  g_error ("serialise error on n_children");
+  g_error ("deserialise error on n_children");
   return 0;
 }
 
@@ -526,12 +552,8 @@ g_svariant_serialise (GSVariant        container,
             }
         }
 
-        /*
-        {
-          guint index_size = g_variant_serialiser_index_size (container);
-          g_assert_cmpuint (offset + index_size * index, ==, container.size);
-        }
-*/
+        g_variant_serialiser_sanity_check (container, offset, index);
+
         return;
       }
 
@@ -588,12 +610,7 @@ g_svariant_serialise (GSVariant        container,
               }
 
             g_assert_cmpint (index, ==, 0);
-/*
-            {
-              guint idx_sz = g_variant_serialiser_index_size (container);
-              g_assert_cmpint (offset + idx_sz * n_items, ==, container.size);
-            }
-            */
+            g_variant_serialiser_sanity_check (container, offset, n_children);
           }
 
         return;
