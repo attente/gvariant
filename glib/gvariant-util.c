@@ -869,6 +869,7 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
                        "a maybe cannot contain more than one value");
           return FALSE;
         }
+      break;
 
     case G_SIGNATURE_TYPE_DICT_ENTRY:
       if (builder->offset > 1)
