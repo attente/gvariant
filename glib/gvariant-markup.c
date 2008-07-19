@@ -459,6 +459,14 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
           value = g_variant_new_uint32 (g_ascii_strtoull (string, &end, 0));
           break;
 
+        case G_SIGNATURE_TYPE_INT64:
+          value = g_variant_new_int64 (g_ascii_strtoll (string, &end, 0));
+          break;
+
+        case G_SIGNATURE_TYPE_UINT64:
+          value = g_variant_new_uint64 (g_ascii_strtoull (string, &end, 0));
+          break;
+
         case G_SIGNATURE_TYPE_DOUBLE:
           value = g_variant_new_double (g_ascii_strtod (string, &end));
           break;
