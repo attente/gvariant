@@ -55,7 +55,24 @@ const char *verbatim_tests[] = {
       "<int32>-1</int32>"
       "<double>37.500000</double>"
     "</struct>"
-  "</maybe>"
+  "</maybe>",
+
+  "<struct>"
+    "<array>"
+      "<true/>"
+      "<false/>"
+      "<true/>"
+      "<true/>"
+      "<false/>"
+      "<false/>"
+      "<true/>"
+      "<true/>"
+    "</array>"
+    "<array>"
+      "<triv/>"
+      "<triv/>"
+    "</array>"
+  "</struct>"
 };
 
 static void

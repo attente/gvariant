@@ -245,6 +245,7 @@ g_variant_markup_print (GVariant *value,
 typedef struct
 {
   GVariantBuilder *builder;
+  GVariant *this_value;
   GString *string;
 } GVariantParseData;
 
@@ -283,6 +284,22 @@ type_from_keyword (const char *keyword)
   return G_SIGNATURE_TYPE_INVALID;
 }
 
+static GVariant *
+value_from_keyword (const char *keyword)
+{
+
+  if (!strcmp (keyword, "true"))
+    return g_variant_new_boolean (TRUE);
+
+  else if (!strcmp (keyword, "false"))
+    return g_variant_new_boolean (FALSE);
+
+  else if (!strcmp (keyword, "triv"))
+    return g_variant_new ("()");
+
+  return NULL;
+}
+
 static void
 g_variant_markup_parser_start_element (GMarkupParseContext  *context,
                                        const char           *element_name,
@@ -303,6 +320,19 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
                    element_name);
       return;
     }
+
+  if (data->this_value != NULL)
+    {
+      g_set_error (error, 0, 0, /* XXX FIXME */
+                   "nothing may appear here except </%s>",
+                   (const gchar *)
+                   g_markup_parse_context_get_element_stack (context)
+                     ->next->data);
+      return;
+    }
+
+  if ((data->this_value = value_from_keyword (element_name)))
+    return;
 
   type = type_from_keyword (element_name);
 
@@ -368,6 +398,13 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
 {
   GVariantParseData *data = user_data;
   GSignatureType type;
+
+  if (data->this_value)
+    {
+      g_variant_builder_add_value (data->builder, data->this_value);
+      data->this_value = NULL;
+      return;
+    }
 
   type = type_from_keyword (element_name);
 
@@ -495,6 +532,9 @@ g_variant_markup_parser_error (GMarkupParseContext *context,
     g_string_free (data->string, TRUE);
   data->string = NULL;
 
+  if (data->this_value)
+    g_variant_unref (data->this_value);
+  data->this_value = NULL;
 
   if (data->builder)
     g_variant_builder_abort (data->builder);
@@ -564,6 +604,7 @@ g_variant_markup_parse (const char  *string,
   data = g_slice_new (GVariantParseData);
   data->builder = g_variant_builder_new (G_SIGNATURE_TYPE_VARIANT,
                                          signature);
+  data->this_value = NULL;
   data->string = NULL;
 
   context = g_markup_parse_context_new (&g_variant_markup_parser,
