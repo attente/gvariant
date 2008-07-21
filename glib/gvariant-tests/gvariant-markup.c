@@ -55,6 +55,8 @@ const char *verbatim_tests[] = {
       "<byte>0x42</byte>"
       "<int32>-1</int32>"
       "<double>37.500000</double>"
+      "<int64>-35383472451088536</int64>"
+      "<uint64>9446744073709551616</uint64>"
     "</struct>"
   "</maybe>",
 
