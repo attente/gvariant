@@ -422,13 +422,14 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
         if (!g_ascii_isspace (data->string->str[i]))
           break;
 
-      if (G_UNLIKELY (i == data->string->len))
-          {
-            g_set_error (error, 0, 0, /* XXX FIXME */
-                         "character data expected before </%s>",
-                         element_name);
-            return;
-          }
+      if (G_UNLIKELY (i == data->string->len) &&
+          type != G_SIGNATURE_TYPE_STRING)
+        {
+          g_set_error (error, 0, 0, /* XXX FIXME */
+                       "character data expected before </%s>",
+                       element_name);
+          return;
+        }
 
       string = &data->string->str[i];
  

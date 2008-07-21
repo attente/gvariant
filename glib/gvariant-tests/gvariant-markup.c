@@ -39,6 +39,7 @@ const char *verbatim_tests[] = {
     "<string>how &lt;are&gt; you</string>"
     "<string> working -- i -- hope    </string>"
     "<string>%s %d %s %d</string>"
+    "<string></string>"
   "</array>",
 
   "<array>"
