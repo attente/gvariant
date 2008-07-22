@@ -8,6 +8,7 @@ AM_CFLAGS = -Wall -Wwrite-strings -Wmissing-prototypes \
 
 libgvariant_la_LIBADD = $(glib_LIBS)
 libgvariant_la_SOURCES = \
+	gvarianttype.c		\
 	gsignature.c		\
 	gsvariant.c		\
 	gsvhelper.c		\
