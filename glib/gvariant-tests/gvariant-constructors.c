@@ -3,8 +3,8 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
- * published by the Free Software Foundation.   
- * 
+ * published by the Free Software Foundation.
+ *
  * See the included COPYING file for more information.
  */
 
@@ -16,12 +16,12 @@ test_int64 (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     gint64 value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_INT64, G_GINT64_CONSTANT(0xffffffffffffffff) }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_INT64, G_GINT64_CONSTANT(0xffffffffffffffff) },
     { (const char *) G_SIGNATURE_INT64, G_GINT64_CONSTANT(0x7fffffffffffffff) },
     { (const char *) G_SIGNATURE_INT64, G_GINT64_CONSTANT(0x0000000000000000) },
     { (const char *) G_SIGNATURE_INT64, G_GINT64_CONSTANT(4242424242424242) },
@@ -29,8 +29,8 @@ test_int64 (void)
     { (const char *) G_SIGNATURE_INT64, G_GINT64_CONSTANT(0x1010101010101010) },
   };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_int64 (values[i].value);
       gint64 test;
       g_variant_get (variant, values[i].type, &test);
@@ -47,20 +47,20 @@ test_uint64 (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     guint64 value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(0xffffffffffffffff) }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(0xffffffffffffffff) },
     { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(0x7fffffffffffffff) },
     { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(0x0000000000000000) },
     { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(4242424242424242) },
     { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(0x0101010101010101) },
     { (const char *) G_SIGNATURE_UINT64, G_GUINT64_CONSTANT(0x1010101010101010) },  };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_uint64 (values[i].value);
       guint64 test;
       g_variant_get (variant, values[i].type, &test);
@@ -76,23 +76,23 @@ test_double (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     gdouble value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_DOUBLE, 0.123 }, 
-    { (const char *) G_SIGNATURE_DOUBLE, 123 }, 
-    { (const char *) G_SIGNATURE_DOUBLE, 0.1234 }, 
-    { (const char *) G_SIGNATURE_DOUBLE, 1.5567 }, 
-    { (const char *) G_SIGNATURE_DOUBLE, 1.5563 }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_DOUBLE, 0.123 },
+    { (const char *) G_SIGNATURE_DOUBLE, 123 },
+    { (const char *) G_SIGNATURE_DOUBLE, 0.1234 },
+    { (const char *) G_SIGNATURE_DOUBLE, 1.5567 },
+    { (const char *) G_SIGNATURE_DOUBLE, 1.5563 },
     { (const char *) G_SIGNATURE_DOUBLE, 0. / 0. },
     { (const char *) G_SIGNATURE_DOUBLE, 1. / 0. },
     { (const char *) G_SIGNATURE_DOUBLE, -1. / 0. },
   };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_double (values[i].value);
       gdouble test;
       g_variant_get (variant, values[i].type, &test);
@@ -108,12 +108,12 @@ test_int32 (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     gint32 value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_INT32, 0xffffffff }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_INT32, 0xffffffff },
     { (const char *) G_SIGNATURE_INT32, 0x7fffffff },
     { (const char *) G_SIGNATURE_INT32, 0x00000000 },
     { (const char *) G_SIGNATURE_INT32, 42424242 },
@@ -121,8 +121,8 @@ test_int32 (void)
     { (const char *) G_SIGNATURE_INT32, 0x10101010 },
   };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_int32 (values[i].value);
       gint32 test;
       g_variant_get (variant, values[i].type, &test);
@@ -139,12 +139,12 @@ test_uint32 (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     guint32 value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_UINT32, 0xffffffff }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_UINT32, 0xffffffff },
     { (const char *) G_SIGNATURE_UINT32, 0x7fffffff },
     { (const char *) G_SIGNATURE_UINT32, 0x00000000 },
     { (const char *) G_SIGNATURE_UINT32, 42424242 },
@@ -152,8 +152,8 @@ test_uint32 (void)
     { (const char *) G_SIGNATURE_UINT32, 0x10101010 },
   };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_uint32 (values[i].value);
       guint32 test;
       g_variant_get (variant, values[i].type, &test);
@@ -225,20 +225,20 @@ test_string (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     const char *value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_STRING, "" }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_STRING, "" },
     { (const char *) G_SIGNATURE_STRING, "the anti string" },
     { (const char *) G_SIGNATURE_STRING, "<xml attr=\"test\"><![CDATA[ abdbdb\n\n%&*@&#\n]]></xml>" },
     { (const char *) G_SIGNATURE_STRING, "I do, I in fact , I insist" },
     { (const char *) G_SIGNATURE_STRING, "%s %d %s %*.*s printf, anyone?" },
   };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_string (values[i].value);
       char *test;
 
@@ -256,17 +256,17 @@ test_boolean (void)
 {
   int i;
 
-  static struct 
+  static struct
   {
     const char *type;
     gboolean value;
-  } values[] = { 
-    { (const char *) G_SIGNATURE_BOOLEAN, TRUE }, 
+  } values[] = {
+    { (const char *) G_SIGNATURE_BOOLEAN, TRUE },
     { (const char *) G_SIGNATURE_BOOLEAN, FALSE },
   };
 
-  for (i = 0; i < G_N_ELEMENTS (values); i++) 
-    {	
+  for (i = 0; i < G_N_ELEMENTS (values); i++)
+    {
       GVariant *variant = g_variant_new_boolean (values[i].value);
       gboolean test;
 

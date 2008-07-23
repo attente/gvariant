@@ -7,7 +7,7 @@ if [ "$1" = "clean" ]; then
         depcomp ltmain.sh config.guess config.sub \
         `find . -name Makefile.in` compile \
         docs/reference/gtk-doc.make
-  rm -rf autom4te.cache      
+  rm -rf autom4te.cache
   exit
 fi
 

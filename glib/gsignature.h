@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright © 2007, 2008 Ryan Lortie
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * See the included COPYING file for more information.
  */
 
@@ -71,7 +71,7 @@ typedef enum
   G_SIGNATURE_TYPE_INVALID           = '\0',
   G_SIGNATURE_TYPE_BOOLEAN            = 'b',
   G_SIGNATURE_TYPE_BYTE               = 'y',
-          
+
   G_SIGNATURE_TYPE_INT16              = 'n',
   G_SIGNATURE_TYPE_UINT16             = 'q',
   G_SIGNATURE_TYPE_INT32              = 'i',
@@ -80,7 +80,7 @@ typedef enum
   G_SIGNATURE_TYPE_UINT64             = 't',
 
   G_SIGNATURE_TYPE_DOUBLE             = 'd',
-    
+
   G_SIGNATURE_TYPE_STRING             = 's',
   G_SIGNATURE_TYPE_OBJECT_PATH        = 'o',
   G_SIGNATURE_TYPE_SIGNATURE          = 'g',
@@ -296,7 +296,7 @@ GSignature     g_signature_structify (GSignature     *items,
 GSignature     g_signature_dictify   (GSignature      key,
                                       GSignature      value)     G_GNUC_MALLOC;
 gboolean       g_signature_type_is_basic (GSignatureType type) G_GNUC_CONST;
- 
+
 #pragma GCC visibility pop
 
 #define g_signature_open_blindly(s)      ((GSignature) &((char *)(s))[1])

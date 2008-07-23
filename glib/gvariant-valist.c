@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright © 2007, 2008 Ryan Lortie
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * See the included COPYING file for more information.
  */
 
@@ -78,7 +78,7 @@ g_variant_valist_get (GVariant   *value,
         GVariant **ptr;
 
         ptr = va_arg (*app, GVariant **);
-        
+
         if (ptr != NULL)
           *ptr = g_variant_ref (value);
 
@@ -482,7 +482,7 @@ g_variant_get_full (GVariant   *value,
  * GVariantIter iter;
  * char *name;
  * gint32 number;
- * 
+ *
  * g_variant_get (value, "(a*s)", iter, NULL);
  * while (g_variant_iterate (iter, "{si}", &name, &number))
  *   printf ("  '%s' -> %d\n", name, number);
@@ -614,7 +614,7 @@ g_variant_new_full (gboolean   steal,
  *                          "zero", 0,
  *                          "one",  1,
  *                          "two",  2,
- *                        "outside of the array");  
+ *                        "outside of the array");
  * </programlisting>
  *
  * If you would like to construct an array less

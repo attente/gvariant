@@ -3,8 +3,8 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
- * published by the Free Software Foundation.   
- * 
+ * published by the Free Software Foundation.
+ *
  * See the included COPYING file for more information.
  */
 
@@ -159,7 +159,7 @@ g_variant_iterate (GVariantIter *iter,
   va_list ap;
 
   value = g_variant_iter_next (iter);
-  
+
   if (value == NULL)
     return FALSE;
 

@@ -432,7 +432,7 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
         }
 
       string = &data->string->str[i];
- 
+
       switch (type)
       {
         case G_SIGNATURE_TYPE_BOOLEAN:

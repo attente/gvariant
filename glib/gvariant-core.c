@@ -3,8 +3,8 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
- * published by the Free Software Foundation.   
- * 
+ * published by the Free Software Foundation.
+ *
  * See the included COPYING file for more information.
  */
 
@@ -285,7 +285,7 @@ g_variant_unref (GVariant *value)
         case G_VARIANT_NOTIFY:
           {
             gpointer user_data;
-           
+
             user_data = value->contents.notify.user_data;
             value->contents.notify.callback (user_data);
 
@@ -327,7 +327,7 @@ g_variant_alloc (GVariantRepresentation  representation,
   GVariant *variant;
 
   /* constant expression sanity checks.  will compile out. */
-  g_assert ((G_STRUCT_OFFSET (GVariant, contents.small.data) & 7) == 0); 
+  g_assert ((G_STRUCT_OFFSET (GVariant, contents.small.data) & 7) == 0);
   g_assert (sizeof (GVariant) <= sizeof (gpointer) * 6);
 
   variant = g_slice_new (GVariant);
@@ -580,7 +580,7 @@ g_variant_from_gsv (GSVariant  gsv,
         }
 
       value->native_endian = TRUE;
-    } 
+    }
   else
     {
       g_assert (source->representation == G_VARIANT_LARGE ||
@@ -788,7 +788,7 @@ g_variant_has_signature (GVariant  *value,
 /*
  * g_variant_copy_self:
  * @value: a #GVariant
- * 
+ *
  * Takes a large serialised value that uses its parent's data and
  * makes a copy of the data for itself.  This allows the reference on
  * the parent to be released.

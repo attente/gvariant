@@ -3,8 +3,8 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
- * published by the Free Software Foundation.   
- * 
+ * published by the Free Software Foundation.
+ *
  * See the included COPYING file for more information.
  */
 
@@ -80,7 +80,7 @@ test_a_si (void)
   g_free (stwo);
 }
 
-static void 
+static void
 test_s_vvvv_v (void)
 {
   GVariant *variant;
@@ -96,9 +96,9 @@ test_s_vvvv_v (void)
                            g_variant_new_string ("abc"),
                            g_variant_new_uint16 (0xfff3),
                            g_variant_new_byte (255),
-			   g_variant_new_byte (0));
+                           g_variant_new_byte (0));
 
-  g_variant_get (variant, "(s(vvvv)v)", &s, 
+  g_variant_get (variant, "(s(vvvv)v)", &s,
                  &t1, &t2, &t3, &t4, &t5);
 
   g_variant_get (t1, (const char *) G_SIGNATURE_BOOLEAN, &myboolean);
@@ -124,7 +124,7 @@ test_s_vvvv_v (void)
   g_free (s);
 }
 
-static void 
+static void
 test_vvvv (void)
 {
   guint16 myuint16;
@@ -133,14 +133,14 @@ test_vvvv (void)
   guint8 mymaxbyte, myminbyte;
   GVariant *t1, *t2, *t3, *t4;
   GVariant *variant;
- 
+
   variant = g_variant_new ("(vvvv)",
                            g_variant_new_boolean (TRUE),
                            g_variant_new_string ("abc"),
                            g_variant_new_uint16 (0xfff3),
                            g_variant_new_byte (255));
 
-  g_variant_get (variant, "(vvvv)", 
+  g_variant_get (variant, "(vvvv)",
                  &t1, &t2, &t3, &t4);
 
   g_variant_get (t1, (const char *) G_SIGNATURE_BOOLEAN, &myboolean);

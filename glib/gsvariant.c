@@ -4,7 +4,7 @@
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * See the included COPYING file for more information.
  */
 
@@ -80,7 +80,7 @@ g_svariant_dereference (GSVariant  container,
                    return FALSE;
 
                  bytes -= (index + 1) * offset_size;
-                 memcpy (tmpvalue.bytes, bytes, offset_size);  
+                 memcpy (tmpvalue.bytes, bytes, offset_size);
                },
                *result = GSIZE_TO_LE (tmpvalue.integer));
 
@@ -667,7 +667,7 @@ g_svariant_needed_size (GSVHelper       *helper,
         g_assert_cmpint (n_children, ==, 1);
         gsv_filler (&child, children[0]);
 
-        return child.size + 1 + 
+        return child.size + 1 +
                g_signature_length (g_svhelper_signature (child.helper));
       }
 
@@ -910,18 +910,18 @@ g_svariant_is_normalised (GSVariant value)
     case G_SIGNATURE_TYPE_DICT_ENTRY:
     case G_SIGNATURE_TYPE_VARIANT:
       {
-	gsize children, i;
+        gsize children, i;
 
-	children = g_svariant_n_children (value);
-	for (i = 0; i < children; i++)
-	  {
-	    GSVariant child;
+        children = g_svariant_n_children (value);
+        for (i = 0; i < children; i++)
+          {
+            GSVariant child;
 
-	    child = g_svariant_get_child (value, i);
+            child = g_svariant_get_child (value, i);
             if (!g_svariant_is_normalised (child))
               return FALSE;
-	  }
-	break;
+          }
+        break;
       }
 
     default:
