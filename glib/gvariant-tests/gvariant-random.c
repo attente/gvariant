@@ -2,18 +2,18 @@
 #include <glib/gvariant.h>
 
 #define TESTS                     65536
-#define MAXIMUM_DEPTH             10
-#define MAXIMUM_ARRAY_SIZE        10
-#define MAXIMUM_STRUCT_SIZE       10
+#define MAXIMUM_DEPTH             8
+#define MAXIMUM_ARRAY_SIZE        2
+#define MAXIMUM_STRUCT_SIZE       2
 /* the probability of an empty array/struct */
 #define PROBABILITY_OF_NOTHING    0.1
 #define PROBABILITY_OF_BASIC_TYPE 0.3
 /* log base 2 of maximum string length */
-#define LOG_2_MAXIMUM_STRING_SIZE 12
+#define LOG_2_MAXIMUM_STRING_SIZE 2
 
 /* change these only when protocol changes */
 #define NUMBER_OF_BASIC_TYPES     10
-#define NUMBER_OF_CONTAINER_TYPES 4
+#define NUMBER_OF_CONTAINER_TYPES 5
 
 static void         random_signature             (GString *signature,
                                                   int      depth);
@@ -281,6 +281,7 @@ random_markup (GString *markup,
 
   random_signature (signature, depth);
   random_markup_from_signature (markup, signature->str, depth);
+  g_message ("%s", signature->str);
 
   g_string_free (signature, TRUE);
 }
