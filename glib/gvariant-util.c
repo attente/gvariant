@@ -584,7 +584,7 @@ g_variant_builder_open (GVariantBuilder *parent,
                                                 signature, &error)))
     g_error ("g_variant_builder_open: %s", error->message);
 
-  if (signature == NULL)
+  if (type != G_SIGNATURE_TYPE_VARIANT && signature == NULL)
     signature = parent->expected; /* possibly still NULL */
 
   child = g_variant_builder_new (type, signature);
@@ -802,6 +802,9 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
   g_assert (type != G_SIGNATURE_TYPE_INVALID);
+
+  if (type == G_SIGNATURE_TYPE_VARIANT)
+    signature = NULL;
 
   if (signature && g_signature_type (signature) != type)
     {
