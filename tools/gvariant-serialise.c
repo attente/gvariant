@@ -1,4 +1,4 @@
-#include <glib/gvariant.h>
+#include <glib/gvariant-loadstore.h>
 #include <string.h>
 #include <glib.h>
 
@@ -11,9 +11,10 @@ main (int argc, char **argv)
   GMarkupParseContext *context;
   GError *error = NULL;
   FILE *file = stdin;
+  gconstpointer data;
   char buffer[2048];
-  GString *output;
   GVariant *value;
+  gboolean raw;
   gsize size;
   gint i = 1;
 
@@ -21,6 +22,14 @@ main (int argc, char **argv)
                                         G_MARKUP_PREFIX_ERROR_POSITION,
                                         NULL, NULL);
   g_variant_markup_parser_start_parse (context, NULL);
+
+  raw = FALSE;
+
+  if (i < argc && strcmp (argv[i], "-b") == 0)
+    {
+      raw = TRUE;
+      i++;
+    }
 
   do
     {
@@ -31,7 +40,6 @@ main (int argc, char **argv)
           else
             file = fopen (argv[i], "r");
 
-          if (file == NULL)
             g_error ("error opening file '%s'", argv[i]);
         }
 
@@ -56,13 +64,23 @@ main (int argc, char **argv)
 
   g_markup_parse_context_free (context);
 
-  g_variant_flatten (value);
+  data = g_variant_get_data (value);
+  size = g_variant_get_size (value);
 
-  output = g_variant_markup_print (value, NULL, TRUE, 0, 2);
+  if (raw)
+    file = stdout;
+  else
+    file = popen ("hexdump -C", "w");
+
+  if (file == NULL)
+    g_error ("failed to open output");
+
+  fwrite (data, 1, size, file);
+
+  if (file != stdout)
+    fclose (file);
+
   g_variant_unref (value);
-
-  g_print ("%s", output->str);
-  g_string_free (output, TRUE);
 
   return 0;
 }

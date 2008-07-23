@@ -739,6 +739,15 @@ g_svariant_needed_size (GSVHelper       *helper,
 
         g_assert_cmpint (g_svhelper_n_members (helper), ==, n_children);
 
+        {
+          gssize fixed_size;
+
+          g_svhelper_info (helper, NULL, &fixed_size);
+
+          if (fixed_size >= 0)
+            return fixed_size;
+        }
+
         n_offsets = 0;
         offset = 0;
 
@@ -772,6 +781,10 @@ g_svariant_needed_size (GSVHelper       *helper,
                 offset += size;
               }
           }
+
+          /* no need to pad fixed-sized structures here because
+           * fixed sized structures are taken care of directly.
+           */
 
         return g_svariant_determine_size (offset, n_offsets, FALSE);
       }
