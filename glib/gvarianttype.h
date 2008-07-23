@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright © 2007, 2008 Ryan Lortie
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of version 3 of the GNU General Public License as
  * published by the Free Software Foundation.
- * 
+ *
  * See the included COPYING file for more information.
  */
 
@@ -56,7 +56,7 @@ typedef enum
   G_VARIANT_CLASS_INVALID           = '\0',
   G_VARIANT_CLASS_BOOLEAN            = 'b',
   G_VARIANT_CLASS_BYTE               = 'y',
-          
+
   G_VARIANT_CLASS_INT16              = 'n',
   G_VARIANT_CLASS_UINT16             = 'q',
   G_VARIANT_CLASS_INT32              = 'i',
@@ -65,7 +65,7 @@ typedef enum
   G_VARIANT_CLASS_UINT64             = 't',
 
   G_VARIANT_CLASS_DOUBLE             = 'd',
-    
+
   G_VARIANT_CLASS_STRING             = 's',
   G_VARIANT_CLASS_OBJECT_PATH        = 'o',
   G_VARIANT_CLASS_SIGNATURE          = 'g',
