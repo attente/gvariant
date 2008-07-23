@@ -245,7 +245,7 @@ g_variant_markup_print (GVariant *value,
 typedef struct
 {
   GVariantBuilder *builder;
-  GVariant *this_value;
+  gboolean terminal_value;
   GString *string;
 } GVariantParseData;
 
@@ -271,6 +271,7 @@ type_from_keyword (const char *keyword)
     { G_SIGNATURE_TYPE_SIGNATURE,        "signature" },
     { G_SIGNATURE_TYPE_VARIANT,          "variant" },
     { G_SIGNATURE_TYPE_MAYBE,            "maybe" },
+    { G_SIGNATURE_TYPE_MAYBE,            "nothing" },
     { G_SIGNATURE_TYPE_ARRAY,            "array" },
     { G_SIGNATURE_TYPE_STRUCT,           "struct" },
     { G_SIGNATURE_TYPE_DICT_ENTRY,       "dictionary-entry" }
@@ -312,6 +313,7 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
   const char *signature_string;
   GSignature signature;
   GSignatureType type;
+  GVariant *value;
 
   if (data->string != NULL)
     {
@@ -321,7 +323,7 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
       return;
     }
 
-  if (data->this_value != NULL)
+  if (data->terminal_value)
     {
       g_set_error (error, 0, 0, /* XXX FIXME */
                    "nothing may appear here except </%s>",
@@ -331,8 +333,19 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
       return;
     }
 
-  if ((data->this_value = value_from_keyword (element_name)))
-    return;
+  if ((value = value_from_keyword (element_name)))
+    {
+      if (!g_variant_builder_check_add (data->builder,
+                                        g_signature_type (g_variant_get_signature (value)),
+                                        g_variant_get_signature (value),
+                                        error))
+        return;
+
+      g_variant_builder_add_value (data->builder, value);
+      data->terminal_value = TRUE;
+
+      return;
+    }
 
   type = type_from_keyword (element_name);
 
@@ -368,6 +381,13 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
     data->string = g_string_new (NULL);
   else
     data->builder = g_variant_builder_open (data->builder, type, signature);
+
+  /* special case: <nothing/> may contain no children */
+  if (strcmp (element_name, "nothing") == 0)
+    {
+      data->builder = g_variant_builder_close (data->builder);
+      data->terminal_value = TRUE;
+    }
 }
 
 static gboolean
@@ -399,10 +419,9 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
   GVariantParseData *data = user_data;
   GSignatureType type;
 
-  if (data->this_value)
+  if (data->terminal_value)
     {
-      g_variant_builder_add_value (data->builder, data->this_value);
-      data->this_value = NULL;
+      data->terminal_value = FALSE;
       return;
     }
 
@@ -541,10 +560,6 @@ g_variant_markup_parser_error (GMarkupParseContext *context,
     g_string_free (data->string, TRUE);
   data->string = NULL;
 
-  if (data->this_value)
-    g_variant_unref (data->this_value);
-  data->this_value = NULL;
-
   if (data->builder)
     g_variant_builder_abort (data->builder);
   data->builder = NULL;
@@ -570,6 +585,7 @@ g_variant_markup_parser_start_parse (GMarkupParseContext *context,
   data = g_slice_new (GVariantParseData);
   data->builder = g_variant_builder_new (G_SIGNATURE_TYPE_VARIANT,
                                          signature);
+  data->terminal_value = FALSE;
   data->string = NULL;
 
   g_markup_parse_context_push (context, &g_variant_markup_parser, data);
@@ -613,7 +629,7 @@ g_variant_markup_parse (const char  *string,
   data = g_slice_new (GVariantParseData);
   data->builder = g_variant_builder_new (G_SIGNATURE_TYPE_VARIANT,
                                          signature);
-  data->this_value = NULL;
+  data->terminal_value = FALSE;
   data->string = NULL;
 
   context = g_markup_parse_context_new (&g_variant_markup_parser,
