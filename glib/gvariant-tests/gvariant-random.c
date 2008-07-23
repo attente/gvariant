@@ -2,9 +2,9 @@
 #include <glib/gvariant.h>
 
 #define TESTS                     65536
-#define MAXIMUM_DEPTH             20
-#define MAXIMUM_ARRAY_SIZE        20
-#define MAXIMUM_STRUCT_SIZE       20
+#define MAXIMUM_DEPTH             10
+#define MAXIMUM_ARRAY_SIZE        10
+#define MAXIMUM_STRUCT_SIZE       10
 /* the probability of an empty array/struct */
 #define PROBABILITY_OF_NOTHING    0.1
 #define PROBABILITY_OF_BASIC_TYPE 0.3
@@ -200,7 +200,7 @@ random_markup_from_signature (GString     *markup,
           }
         else
           {
-            const gchar *next = next_type_in_signature (++signature);
+            const gchar *next = next_type_in_signature (signature);
 
             g_string_append (markup, "<array signature='");
             g_string_append_len (markup, signature, next - signature);
@@ -258,7 +258,7 @@ random_markup_from_signature (GString     *markup,
           }
         else
           {
-            const gchar *next = next_type_in_signature (++signature);
+            const gchar *next = next_type_in_signature (signature);
 
             g_string_append (markup, "<nothing signature='");
             g_string_append_len (markup, signature, next - signature);
