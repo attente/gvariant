@@ -13,7 +13,7 @@
 
 /* change these only when protocol changes */
 #define NUMBER_OF_BASIC_TYPES     10
-#define NUMBER_OF_CONTAINER_TYPES 5
+#define NUMBER_OF_CONTAINER_TYPES 4
 
 static void         random_signature             (GString *signature,
                                                   int      depth);
@@ -230,7 +230,9 @@ random_markup_from_signature (GString     *markup,
         return signature + 1;
 
       case 'v':
+        g_string_append (markup, "<variant>");
         random_markup (markup, depth - 1);
+        g_string_append (markup, "</variant>");
         return signature + 1;
 
       case '{':
