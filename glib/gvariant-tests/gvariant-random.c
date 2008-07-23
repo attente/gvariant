@@ -2,12 +2,12 @@
 #include <glib/gvariant.h>
 
 #define TESTS                     65536
-#define MAXIMUM_DEPTH             10
-#define MAXIMUM_ARRAY_SIZE        10
-#define MAXIMUM_STRUCT_SIZE       10
+#define MAXIMUM_DEPTH             20
+#define MAXIMUM_ARRAY_SIZE        20
+#define MAXIMUM_STRUCT_SIZE       20
 /* the probability of an empty array/struct */
 #define PROBABILITY_OF_NOTHING    0.1
-#define PROBABILITY_OF_BASIC_TYPE 0.4
+#define PROBABILITY_OF_BASIC_TYPE 0.3
 /* log base 2 of maximum string length */
 #define LOG_2_MAXIMUM_STRING_SIZE 12
 
@@ -299,7 +299,7 @@ test (void)
       depth = g_test_rand_int_range (0, MAXIMUM_DEPTH);
 
       random_markup (markup1, depth);
-      g_printf ("\n%s", markup1->str);
+      g_message ("%s", markup1->str);
       variant = g_variant_markup_parse (markup1->str, NULL, &error);
 
       if (variant == NULL)
