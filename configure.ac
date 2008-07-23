@@ -16,5 +16,7 @@ AC_OUTPUT([
   glib/gvariant.pc
   glib/Makefile
 
+  tools/Makefile
+
   Makefile
 ])
