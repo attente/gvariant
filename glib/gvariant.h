@@ -33,17 +33,15 @@ gboolean                        g_variant_matches                       (GVarian
                                                                          GSignature            pattern);
 GVariant                       *g_variant_ref                           (GVariant             *value);
 GVariant                       *g_variant_unref                         (GVariant             *value);
+GVariant                       *g_variant_ref_sink                      (GVariant             *value);
 
-GVariant                       *g_variant_vvnew                         (gboolean              steal,
-                                                                         GSignature            signature,
+GVariant                       *g_variant_vvnew                         (GSignature            signature,
                                                                          va_list              *app);
 
-GVariant                       *g_variant_vnew                          (gboolean              steal,
-                                                                         GSignature            signature,
+GVariant                       *g_variant_vnew                          (GSignature            signature,
                                                                          va_list               ap);
 
-GVariant                       *g_variant_new_full                      (gboolean              steal,
-                                                                         GSignature            signature,
+GVariant                       *g_variant_new_full                      (GSignature            signature,
                                                                          ...);
 
 GVariant                       *g_variant_new                           (const gchar          *signature_string,
@@ -142,8 +140,6 @@ GString                        *g_variant_markup_print                  (GVarian
                                                                          gboolean              newlines,
                                                                          gint                  indentation,
                                                                          gint                  tabstop);
-GMarkupParseContext            *g_variant_markup_parse_context_new      (GMarkupParseFlags     flags);
-GVariant                       *g_variant_markup_parse_context_end      (GMarkupParseContext  *context);
 void                            g_variant_markup_parser_start_parse     (GMarkupParseContext  *context,
                                                                          GSignature            signature);
 GVariant                        *g_variant_markup_parser_end_parse      (GMarkupParseContext  *context,

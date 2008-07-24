@@ -84,88 +84,30 @@ struct OPAQUE_TYPE__GVariant
     } notify;
   } contents;
 
+  GVariantRepresentation representation;
   GSVHelper *signature;
 
-  guint locked : 1;
+  GStaticMutex lock;
 
-  guint representation : 2;
-  guint trusted : 1;
-  guint native_endian : 1;
+  gboolean native_endian;
+  gboolean trusted;
+  gboolean floating;
 
   gint ref_count;
 };
 
 #define check g_variant_assert_invariant
 
-static GStaticMutex g_variant_meta_lock = G_STATIC_MUTEX_INIT;
-static GSList *g_variant_contention_list = NULL;
-typedef struct
-{
-  GCond *condition;
-  GVariant *value;
-  gboolean clear;
-} ContentionItem;
-
 static void
 g_variant_lock (GVariant *value)
 {
-  g_static_mutex_lock (&g_variant_meta_lock);
-
-  if (G_UNLIKELY (value->locked))
-    /* contended case */
-    {
-      ContentionItem *item;
-
-      item = g_slice_new (ContentionItem);
-      item->value = value;
-      item->condition = g_cond_new ();
-      item->clear = FALSE;
-
-      g_variant_contention_list = g_slist_prepend (g_variant_contention_list,
-                                                   item);
-
-      while (!item->clear)
-        {
-          g_static_mutex_unlock (&g_variant_meta_lock);
-          g_cond_wait (item->condition, NULL);
-          g_static_mutex_lock (&g_variant_meta_lock);
-        }
-
-      g_variant_contention_list = g_slist_remove (g_variant_contention_list,
-                                                  item);
-      g_slice_free (ContentionItem, item);
-    }
-  else
-    value->locked = TRUE;
-
-  g_static_mutex_unlock (&g_variant_meta_lock);
+  g_static_mutex_lock (&value->lock);
 }
 
 static void
 g_variant_unlock (GVariant *value)
 {
-  GSList *node;
-
-  g_static_mutex_lock (&g_variant_meta_lock);
-
-  /* the contention list is expected to be -extremely- short */
-  for (node = g_variant_contention_list; node; node = node->next)
-    {
-      ContentionItem *item = node->data;
-
-      if (item->value == value)
-        {
-          item->clear = TRUE;
-          g_cond_signal (item->condition);
-
-          goto unlock;
-        }
-    }
-
-  value->locked = FALSE;
-
- unlock:
-  g_static_mutex_unlock (&g_variant_meta_lock);
+  g_static_mutex_unlock (&value->lock);
 }
 
 /*
@@ -317,6 +259,53 @@ g_variant_ref (GVariant *value)
   return value;
 }
 
+/**
+ * g_variant_ref_sink:
+ * @value: a #GVariant
+ * @returns: the same @variant
+ *
+ * If @value is floating, mark it as no longer floating.  If it is not
+ * floating, increase its reference count.
+ **/
+GVariant *
+g_variant_ref_sink (GVariant *value)
+{
+  check (value);
+
+  g_variant_ref (value);
+  if (g_atomic_int_compare_and_exchange (&value->floating, 1, 0))
+    g_variant_unref (value);
+
+  return value;
+}
+
+GVariant *
+g_variant_ensure_floating (GVariant *value)
+{
+  check (value);
+
+  g_variant_ref_sink (value);
+
+  if (value->ref_count == 1)
+    /* it is exclusively ours */
+    {
+      value->floating = TRUE;
+
+      return value;
+    }
+  else
+    /* someone else has it too.  make our own. */
+    {
+      GVariant *new;
+
+      g_error ("not yet supported");
+      new = NULL;
+      g_variant_unref (value);
+
+      return new;
+    }
+}
+
 /* this is the only function that ever allocates a new GVariant structure.
  * g_variant_unref() is the only function that ever frees one.
  */
@@ -328,13 +317,14 @@ g_variant_alloc (GVariantRepresentation  representation,
 
   /* constant expression sanity checks.  will compile out. */
   g_assert ((G_STRUCT_OFFSET (GVariant, contents.small.data) & 7) == 0);
-  g_assert (sizeof (GVariant) <= sizeof (gpointer) * 6);
+  // g_assert (sizeof (GVariant) <= sizeof (gpointer) * 6);
 
   variant = g_slice_new (GVariant);
   variant->ref_count = 1;
   variant->representation = representation;
   variant->signature = signature;
-  variant->locked = FALSE;
+  variant->floating = TRUE;
+  g_static_mutex_init (&variant->lock);
 
   return variant;
 }

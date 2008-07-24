@@ -153,18 +153,7 @@ g_variant_valist_get (GVariant   *value,
 }
 
 static GVariant *
-g_variant_valist_get_ptr (gboolean  steal,
-                          va_list  *app)
-{
-  if (steal)
-    return va_arg (*app, GVariant *);
-  else
-    return g_variant_ref (va_arg (*app, GVariant *));
-}
-
-static GVariant *
-g_variant_valist_new (gboolean    steal,
-                      GSignature  signature,
+g_variant_valist_new (GSignature  signature,
                       va_list    *app)
 {
   switch (g_signature_type (signature))
@@ -218,10 +207,10 @@ g_variant_valist_new (gboolean    steal,
       return g_variant_new_signature (va_arg (*app, const char *));
 
     case G_SIGNATURE_TYPE_ANY:
-      return g_variant_valist_get_ptr (steal, app);
+      return va_arg (*app, GVariant *);
 
     case G_SIGNATURE_TYPE_VARIANT:
-      return g_variant_new_variant (g_variant_valist_get_ptr (steal, app));
+      return g_variant_new_variant (va_arg (*app, GVariant *));
 
     case G_SIGNATURE_TYPE_ARRAY:
       {
@@ -241,7 +230,7 @@ g_variant_valist_new (gboolean    steal,
         trusted = TRUE;
         for (i = 0; i < n_children; i++)
           {
-            children[i] = g_variant_valist_new (steal, elemsig, app);
+            children[i] = g_variant_valist_new (elemsig, app);
             trusted &= g_variant_is_normalised (children[i]);
           }
 
@@ -288,7 +277,7 @@ g_variant_valist_new (gboolean    steal,
         trusted = TRUE;
         for (i = 0; i < n_children; i++)
           {
-            children[i] = g_variant_valist_new (steal, itemsig, app);
+            children[i] = g_variant_valist_new (itemsig, app);
             trusted &= g_variant_is_normalised (children[i]);
             itemsig = g_signature_next (itemsig);
           }
@@ -320,12 +309,8 @@ g_variant_valist_new (gboolean    steal,
         GVariant **children;
 
         children = g_slice_alloc (sizeof (GVariant *) * 2);
-        children[0] = g_variant_valist_new (steal,
-                                            g_signature_key (signature),
-                                            app);
-        children[1] = g_variant_valist_new (steal,
-                                            g_signature_value (signature),
-                                            app);
+        children[0] = g_variant_valist_new (g_signature_key (signature), app);
+        children[1] = g_variant_valist_new (g_signature_value (signature), app);
 
         if (g_signature_concrete (signature))
           helper = g_svhelper_get (signature);
@@ -506,45 +491,43 @@ g_variant_get (GVariant   *value,
 }
 
 GVariant *
-g_variant_vvnew (gboolean    steal,
-                 GSignature  signature,
+g_variant_vvnew (GSignature  signature,
                  va_list    *app)
 {
   GVariant *value;
 
-  value = g_variant_valist_new (steal, signature, app);
+  value = g_variant_valist_new (signature, app);
   g_variant_flatten (value);
 
-  return value;
+  return g_variant_ensure_floating (value);
 }
 
 GVariant *
-g_variant_vnew (gboolean   steal,
-                GSignature signature,
+g_variant_vnew (GSignature signature,
                 va_list    ap)
 {
   GVariant *value;
 
-  value = g_variant_valist_new (steal, signature, &ap);
+  value = g_variant_valist_new (signature, &ap);
   g_variant_flatten (value);
-  return value;
+
+  return g_variant_ensure_floating (value);
 }
 
 GVariant *
-g_variant_new_full (gboolean   steal,
-                    GSignature signature,
+g_variant_new_full (GSignature signature,
                     ...)
 {
   GVariant *value;
   va_list ap;
 
   va_start (ap, signature);
-  value = g_variant_valist_new (steal, signature, &ap);
+  value = g_variant_valist_new (signature, &ap);
   va_end (ap);
 
   g_variant_flatten (value);
 
-  return value;
+  return g_variant_ensure_floating (value);
 }
 
 /**
@@ -642,10 +625,10 @@ g_variant_new (const char *signature_string,
   signature = g_signature (signature_string);
 
   va_start (ap, signature_string);
-  value = g_variant_valist_new (TRUE, signature, &ap);
+  value = g_variant_valist_new (signature, &ap);
   va_end (ap);
 
   g_variant_flatten (value);
 
-  return value;
+  return g_variant_ensure_floating (value);
 }

@@ -13,10 +13,12 @@
 #include <string.h>
 #include <glib.h>
 
+#ifndef GSIZE_TO_LE
 #if GLIB_SIZEOF_SIZE_T == 4
 # define GSIZE_TO_LE GUINT32_TO_LE
 #else
 # define GSIZE_TO_LE GUINT64_TO_LE
+#endif
 #endif
 
 static gsize

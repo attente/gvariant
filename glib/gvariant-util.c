@@ -554,7 +554,7 @@ g_variant_builder_add_value (GVariantBuilder *builder,
   if (builder->offset == builder->children_allocated)
     g_variant_builder_resize (builder, builder->children_allocated * 2);
 
-  builder->children[builder->offset++] = value;
+  builder->children[builder->offset++] = g_variant_ref_sink (value);
 }
 
 void
@@ -566,7 +566,7 @@ g_variant_builder_add (GVariantBuilder *builder,
   va_list ap;
 
   va_start (ap, signature);
-  variant = g_variant_vnew (TRUE, g_signature (signature), ap);
+  variant = g_variant_vnew (g_signature (signature), ap);
   va_end (ap);
 
   g_variant_builder_add_value (builder, variant);

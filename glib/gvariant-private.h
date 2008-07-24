@@ -34,5 +34,6 @@ void            g_variant_ensure_native_endian  (GVariant         *value);
 
 void            g_variant_assert_invariant      (GVariant         *value);
 gboolean        g_variant_is_normalised         (GVariant         *value);
+GVariant       *g_variant_ensure_floating       (GVariant         *value);
 
 #endif /* _gvariant_private_h_ */
