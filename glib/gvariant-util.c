@@ -452,7 +452,7 @@ g_variant_get_string (GVariant *value,
 
 char *
 g_variant_dup_string (GVariant *value,
-                      int      *length)
+                      gsize    *length)
 {
   int size;
 
