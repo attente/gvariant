@@ -254,9 +254,9 @@ g_variant_type_is_concrete (const GVariantType *type)
   gsize i;
 
   for (i = 0; i < type_length; i++)
-    if (type_string[i] == '*' || /* any */
-        type_string[i] == 'r' || /* any struct */
-        type_string[i] == 'e')   /* any dict entry */
+    if (type_string[i] == '*' || type_string[i] == '?' ||
+        type_string[i] == '@' || type_string[i] == '&' ||
+        type_string[i] == 'r' || type_string[i] == 'e')
       return FALSE;
 
   return TRUE;
@@ -329,11 +329,37 @@ g_variant_type_is_basic (const GVariantType *type)
     case 's':
     case 'o':
     case 'g':
+    case '?':
+    case '&':
       return TRUE;
 
     default:
       return FALSE;
   }
+}
+
+/**
+ * g_variant_type_is_fixed_size:
+ * @type: a #GVariantType
+ * @returns: %TRUE if @type is a fixed-size type
+ *
+ * Determines if the given type is a fixed-size type.
+ *
+ * Fixed sized types are booleans, bytes, integers, doubles and
+ * structures and dictionary entries made out of fixed types.
+ **/
+gboolean
+g_variant_type_is_fixed_size (const GVariantType *type)
+{
+  const gchar *type_string = g_variant_type_peek_string (type);
+  gsize length = g_variant_type_get_string_length (type);
+  gsize i;
+
+  for (i = 0; i < length; i++)
+   if (strchr ("am*?sog", type_string[i]))
+     return FALSE;
+
+  return TRUE;
 }
 
 /**
@@ -501,31 +527,47 @@ g_variant_type_is_of_class (const GVariantType *type,
 {
   char first_char = *(const gchar *) type;
 
-  switch (first_char)
-  {
-    case '(':
-      return class == G_VARIANT_CLASS_STRUCT;
+  if (first_char == class)
+    return TRUE;
 
-    case '{':
-      return class == G_VARIANT_CLASS_DICT_ENTRY;
+  switch (class)
+  {
+    case G_VARIANT_TYPE_CLASS_ALL:
+      return TRUE;
+
+    case G_VARIANT_TYPE_CLASS_FIXED:
+      return g_variant_type_is_fixed_size (type);
+      
+    case G_VARIANT_TYPE_CLASS_BASIC:
+      return g_variant_type_is_basic (type);
+
+    case G_VARIANT_TYPE_CLASS_FIXED_BASIC:
+      return g_variant_type_is_basic (type) &&
+             g_variant_type_is_fixed_size (type);
+
+    case G_VARIANT_TYPE_CLASS_STRUCT:
+      return first_char == '(';
+
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
+      return first_char == '{';
 
     default:
-      return class == first_char;
+      return FALSE;
   }
 }
 
 GVariantTypeClass
-g_variant_type_class (const GVariantType *type)
+g_variant_type_get_natural_class (const GVariantType *type)
 {
   char first_char = *(const gchar *) type;
 
   switch (first_char)
   {
     case '(':
-      return G_VARIANT_CLASS_STRUCT;
+      return G_VARIANT_TYPE_CLASS_STRUCT;
 
     case '{':
-      return G_VARIANT_CLASS_DICT_ENTRY;
+      return G_VARIANT_TYPE_CLASS_DICT_ENTRY;
 
     default:
       return first_char;
@@ -537,11 +579,11 @@ g_variant_type_class_is_container (GVariantTypeClass class)
 {
   switch (class)
   {
-    case G_VARIANT_CLASS_VARIANT:
-    case G_VARIANT_CLASS_MAYBE:
-    case G_VARIANT_CLASS_ARRAY:
-    case G_VARIANT_CLASS_STRUCT:
-    case G_VARIANT_CLASS_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
+    case G_VARIANT_TYPE_CLASS_MAYBE:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       return TRUE;
 
     default:
@@ -554,18 +596,18 @@ g_variant_type_class_is_basic (GVariantTypeClass class)
 {
   switch (class)
   {
-    case G_VARIANT_CLASS_BOOLEAN:
-    case G_VARIANT_CLASS_BYTE:
-    case G_VARIANT_CLASS_INT16:
-    case G_VARIANT_CLASS_UINT16:
-    case G_VARIANT_CLASS_INT32:
-    case G_VARIANT_CLASS_UINT32:
-    case G_VARIANT_CLASS_INT64:
-    case G_VARIANT_CLASS_UINT64:
-    case G_VARIANT_CLASS_DOUBLE:
-    case G_VARIANT_CLASS_STRING:
-    case G_VARIANT_CLASS_OBJECT_PATH:
-    case G_VARIANT_CLASS_SIGNATURE:
+    case G_VARIANT_TYPE_CLASS_BOOLEAN:
+    case G_VARIANT_TYPE_CLASS_BYTE:
+    case G_VARIANT_TYPE_CLASS_INT16:
+    case G_VARIANT_TYPE_CLASS_UINT16:
+    case G_VARIANT_TYPE_CLASS_INT32:
+    case G_VARIANT_TYPE_CLASS_UINT32:
+    case G_VARIANT_TYPE_CLASS_INT64:
+    case G_VARIANT_TYPE_CLASS_UINT64:
+    case G_VARIANT_TYPE_CLASS_DOUBLE:
+    case G_VARIANT_TYPE_CLASS_STRING:
+    case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
+    case G_VARIANT_TYPE_CLASS_SIGNATURE:
       return TRUE;
 
     default:
@@ -603,7 +645,7 @@ g_variant_type_new_struct (const gpointer     *items,
       else
         type = items[i];
 
-      size = g_variant_type_get_string_size (type);
+      size = g_variant_type_get_string_length (type);
 
       if (offset + size >= sizeof buffer) /* leave room for ')' */
         g_error ("You just requested creation of an extremely complex "
@@ -630,7 +672,7 @@ g_variant_type_new_array (const GVariantType *element)
     g_assert (g_variant_type_check (element));
   } G_END_EXPENSIVE_CHECKS
 
-  size = g_variant_type_get_string_size (element);
+  size = g_variant_type_get_string_length (element);
   new = g_malloc (size + 1);
 
   new[0] = 'a';
@@ -649,7 +691,7 @@ g_variant_type_new_maybe (const GVariantType *element)
     g_assert (g_variant_type_check (element));
   } G_END_EXPENSIVE_CHECKS
 
-  size = g_variant_type_get_string_size (element);
+  size = g_variant_type_get_string_length (element);
   new = g_malloc (size + 1);
 
   new[0] = 'm';
@@ -671,8 +713,8 @@ g_variant_type_new_dict_entry (const GVariantType *key,
     g_assert (g_variant_type_is_basic (key));
   } G_END_EXPENSIVE_CHECKS
 
-  keysize = g_variant_type_get_string_size (key);
-  valsize = g_variant_type_get_string_size (value);
+  keysize = g_variant_type_get_string_length (key);
+  valsize = g_variant_type_get_string_length (value);
 
   new = g_malloc (1 + keysize + valsize + 1);
 

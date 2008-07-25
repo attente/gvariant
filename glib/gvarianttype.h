@@ -19,27 +19,37 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * GVariantTypeClass:
  *
  * @G_VARIANT_TYPE_CLASS_INVALID: the class of no type
- * @G_VARIANT_TYPE_CLASS_BOOLEAN: the class of the type %G_VARIANT_TYPE_BOOLEAN
- * @G_VARIANT_TYPE_CLASS_BYTE: the class of the type %G_VARIANT_TYPE_BYTE
- * @G_VARIANT_TYPE_CLASS_INT16: the class of the type %G_VARIANT_TYPE_INT16
- * @G_VARIANT_TYPE_CLASS_UINT16: the class of the type %G_VARIANT_TYPE_UINT16
- * @G_VARIANT_TYPE_CLASS_INT32: the class of the type %G_VARIANT_TYPE_INT32
- * @G_VARIANT_TYPE_CLASS_UINT32: the class of the type %G_VARIANT_TYPE_UINT32
- * @G_VARIANT_TYPE_CLASS_INT64: the class of the type %G_VARIANT_TYPE_INT64
- * @G_VARIANT_TYPE_CLASS_UINT64: the class of the type %G_VARIANT_TYPE_UINT64
- * @G_VARIANT_TYPE_CLASS_DOUBLE: the class of the type %G_VARIANT_TYPE_DOUBLE
- * @G_VARIANT_TYPE_CLASS_STRING: the class of the type %G_VARIANT_TYPE_STRING
- * @G_VARIANT_TYPE_CLASS_OBJECT_PATH: the class of the type %G_VARIANT_TYPE_OBJECT_PATH
- * @G_VARIANT_TYPE_CLASS_SIGNATURE: the class of the type %G_VARIANT_TYPE_SIGNATURE
- * @G_VARIANT_TYPE_CLASS_VARIANT: the class of the type %G_VARIANT_TYPE_VARIANT
- * @G_VARIANT_TYPE_CLASS_MAYBE: the class of any maybe type
- * @G_VARIANT_TYPE_CLASS_ARRAY: the class of any array type
- * @G_VARIANT_TYPE_CLASS_STRUCT: the class of any structure type
- * @G_VARIANT_TYPE_CLASS_DICT_ENTRY: the class of any dictionary entry type
- * @G_VARIANT_TYPE_CLASS_ANY: the class of one type: %G_VARIANT_TYPE_ANY
- * @G_VARIANT_TYPE_CLASS_ANY_BASIC: the class of one type: %G_VARIANT_TYPE_ANY_BASIC
+ * @G_VARIANT_TYPE_CLASS_BOOLEAN: the class containing the type %G_VARIANT_TYPE_BOOLEAN
+ * @G_VARIANT_TYPE_CLASS_BYTE: the class containing the type %G_VARIANT_TYPE_BYTE
+ * @G_VARIANT_TYPE_CLASS_INT16: the class containing the type %G_VARIANT_TYPE_INT16
+ * @G_VARIANT_TYPE_CLASS_UINT16: the class containing the type %G_VARIANT_TYPE_UINT16
+ * @G_VARIANT_TYPE_CLASS_INT32: the class containing the type %G_VARIANT_TYPE_INT32
+ * @G_VARIANT_TYPE_CLASS_UINT32: the class containing the type %G_VARIANT_TYPE_UINT32
+ * @G_VARIANT_TYPE_CLASS_INT64: the class containing the type %G_VARIANT_TYPE_INT64
+ * @G_VARIANT_TYPE_CLASS_UINT64: the class containing the type %G_VARIANT_TYPE_UINT64
+ * @G_VARIANT_TYPE_CLASS_DOUBLE: the class containing the type %G_VARIANT_TYPE_DOUBLE
+ * @G_VARIANT_TYPE_CLASS_STRING: the class containing the type %G_VARIANT_TYPE_STRING
+ * @G_VARIANT_TYPE_CLASS_OBJECT_PATH: the class containing the type %G_VARIANT_TYPE_OBJECT_PATH
+ * @G_VARIANT_TYPE_CLASS_SIGNATURE: the class containing the type %G_VARIANT_TYPE_SIGNATURE
+ * @G_VARIANT_TYPE_CLASS_VARIANT: the class containing the type %G_VARIANT_TYPE_VARIANT
+ * @G_VARIANT_TYPE_CLASS_MAYBE: the class containing all maybe types
+ *                              (any type matching %G_VARIANT_TYPE_ANY_MAYBE)
+ * @G_VARIANT_TYPE_CLASS_ARRAY: the class containing all array types
+ *                              (any type matching %G_VARIANT_TYPE_ANY_ARRAY)
+ * @G_VARIANT_TYPE_CLASS_STRUCT: the class containing all structure types
+ *                               (any type matching %G_VARIANT_TYPE_ANY_STRUCT)
+ * @G_VARIANT_TYPE_CLASS_DICT_ENTRY: the class containing all dictionary entry types
+ *                                   (any type matching %G_VARIANT_TYPE_ANY_DICT_ENTRY)
+ * @G_VARIANT_TYPE_CLASS_ALL: the class containing all types
+ *                            (any type matching %G_VARIANT_TYPE_ANY)
+ * @G_VARIANT_TYPE_CLASS_BASIC: the class containing all basic types
+ *                              (any type matching %G_VARIANT_TYPE_BASIC)
+ * @G_VARIANT_TYPE_CLASS_FIXED: the class containing all fixed-size types
+ *                              (any type matching %G_VARIANT_TYPE_FIXED)
+ * @G_VARIANT_TYPE_CLASS_FIXED_BASIC: the class containing all fixed-size basic types
+ *                                    (any type matching %G_VARIANT_TYPE_FIXED_BASIC)
  *
- * A enumerated type to group #GVariantType instances into categories.
+ * A enumerated type to group #GVariantType instances into classes.
  *
  * If you ever want to perform some sort of recursive operation on the
  * contents of a #GVariantType you will probably end up using a switch
@@ -47,38 +57,53 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * sub-types.
  *
  * A #GVariantType is said to "be of" a given #GVariantTypeClass.  A
- * #GVariantType is of only one type class.  For example, the
- * @G_VARIANT_TYPE_CLASS_ANY does not contain every #GVariantType.
+ * #GVariantType can have several different type classes.  For
+ * example, %G_VARIANT_TYPE_BOOLEAN is of the following classes:
+ * %G_VARIANT_TYPE_CLASS_BOOLEAN, %G_VARIANT_TYPE_CLASS_BASIC,
+ * %G_VARIANT_TYPE_CLASS_FIXED, %G_VARIANT_TYPE_CLASS_FIXED_BASIC,
+ * %G_VARIANT_TYPE_CLASS_ALL.
+ *
+ * Each #GVariantType has one class that it is a member of that is
+ * said to be the "natural class" of that type.  This is the "most
+ * obvious" class.  The natural class of any basic type is the class
+ * that contains only that type.  The natural class of any container
+ * type is the class for that container.  The "fixed", "basic" or
+ * "all" classes are the natural classes only for each of their
+ * directly corresponding types.  An easy way to think of the natural
+ * class of a type is that it can be completely determined from the
+ * first character of the type string of that type.
  **/
-
 typedef enum
 {
-  G_VARIANT_CLASS_INVALID           = '\0',
-  G_VARIANT_CLASS_BOOLEAN            = 'b',
-  G_VARIANT_CLASS_BYTE               = 'y',
+  G_VARIANT_TYPE_CLASS_INVALID           = '\0',
+  G_VARIANT_TYPE_CLASS_BOOLEAN            = 'b',
+  G_VARIANT_TYPE_CLASS_BYTE               = 'y',
 
-  G_VARIANT_CLASS_INT16              = 'n',
-  G_VARIANT_CLASS_UINT16             = 'q',
-  G_VARIANT_CLASS_INT32              = 'i',
-  G_VARIANT_CLASS_UINT32             = 'u',
-  G_VARIANT_CLASS_INT64              = 'x',
-  G_VARIANT_CLASS_UINT64             = 't',
+  G_VARIANT_TYPE_CLASS_INT16              = 'n',
+  G_VARIANT_TYPE_CLASS_UINT16             = 'q',
+  G_VARIANT_TYPE_CLASS_INT32              = 'i',
+  G_VARIANT_TYPE_CLASS_UINT32             = 'u',
+  G_VARIANT_TYPE_CLASS_INT64              = 'x',
+  G_VARIANT_TYPE_CLASS_UINT64             = 't',
 
-  G_VARIANT_CLASS_DOUBLE             = 'd',
+  G_VARIANT_TYPE_CLASS_DOUBLE             = 'd',
 
-  G_VARIANT_CLASS_STRING             = 's',
-  G_VARIANT_CLASS_OBJECT_PATH        = 'o',
-  G_VARIANT_CLASS_SIGNATURE          = 'g',
+  G_VARIANT_TYPE_CLASS_STRING             = 's',
+  G_VARIANT_TYPE_CLASS_OBJECT_PATH        = 'o',
+  G_VARIANT_TYPE_CLASS_SIGNATURE          = 'g',
 
-  G_VARIANT_CLASS_VARIANT            = 'v',
+  G_VARIANT_TYPE_CLASS_VARIANT            = 'v',
 
-  G_VARIANT_CLASS_MAYBE              = 'm',
-  G_VARIANT_CLASS_ARRAY              = 'a',
-  G_VARIANT_CLASS_STRUCT             = 'r',
-  G_VARIANT_CLASS_DICT_ENTRY         = 'e',
+  G_VARIANT_TYPE_CLASS_MAYBE              = 'm',
+  G_VARIANT_TYPE_CLASS_ARRAY              = 'a',
+  G_VARIANT_TYPE_CLASS_STRUCT             = 'r',
+  G_VARIANT_TYPE_CLASS_DICT_ENTRY         = 'e',
 
-  G_VARIANT_CLASS_ANY                = '*',
-  G_VARIANT_CLASS_ANY_BASIC          = '?'
+  G_VARIANT_TYPE_CLASS_BASIC              = '?',
+  G_VARIANT_TYPE_CLASS_FIXED              = '@',
+  G_VARIANT_TYPE_CLASS_FIXED_BASIC        = '&',
+
+  G_VARIANT_TYPE_CLASS_ALL                = '*',
 } GVariantTypeClass;
 
 /**
@@ -268,6 +293,7 @@ gchar                          *g_variant_type_dup_string               (const G
 gboolean                        g_variant_type_is_concrete              (const GVariantType  *type);
 gboolean                        g_variant_type_is_container             (const GVariantType  *type);
 gboolean                        g_variant_type_is_basic                 (const GVariantType  *type);
+gboolean                        g_variant_type_is_fixed_size            (const GVariantType  *type);
 
 /* for hash tables */
 guint                           g_variant_type_hash                     (gconstpointer        type);
@@ -281,7 +307,7 @@ gboolean                        g_variant_type_matches                  (const G
 /* class functions */
 gboolean                        g_variant_type_is_of_class              (const GVariantType  *type,
                                                                          GVariantTypeClass    class);
-GVariantTypeClass               g_variant_type_class                    (const GVariantType  *type);
+GVariantTypeClass               g_variant_type_get_natural_class        (const GVariantType  *type);
 gboolean                        g_variant_type_class_is_container       (GVariantTypeClass    class);
 gboolean                        g_variant_type_class_is_basic           (GVariantTypeClass    class);
 
