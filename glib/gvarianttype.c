@@ -603,7 +603,7 @@ g_variant_type_next (const GVariantType *type)
   
   type_string += g_variant_type_get_string_length (type);
 
-  if (*type_string == ')')
+  if (*type_string == ')' || *type_string == '}')
     return NULL;
 
   return (const GVariantType *) type_string;
@@ -639,9 +639,9 @@ g_variant_type_value (const GVariantType *type)
 }
 
 GVariantType *
-g_variant_type_new_struct (const gpointer     *items,
-                           gsize               length,
-                           GVariantTypeGetter  func)
+_g_variant_type_new_struct (const gpointer     *items,
+                            GVariantTypeGetter  func,
+                            gsize               length)
 {
   char buffer[1024];
   gsize offset;

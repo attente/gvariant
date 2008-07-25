@@ -482,7 +482,7 @@ struct OPAQUE_TYPE__GVariantBuilder
   GVariantBuilder *parent;
 
   GVariantTypeClass class;
-  const GVariantType *type;
+  GVariantType *type;
   const GVariantType *expected;
 
   GVariant **children;
@@ -512,45 +512,35 @@ g_variant_builder_resize (GVariantBuilder *builder,
   builder->children_allocated = new_allocated;
 }
 
+static gboolean
+g_variant_builder_check_add_value (GVariantBuilder  *builder,
+                                   GVariant         *value,
+                                   GError          **error)
+{
+  const GVariantType *type;
+  GVariantTypeClass class;
+
+  type = g_variant_get_type (value);
+  class = g_variant_type_get_natural_class (type);
+
+  return g_variant_builder_check_add (builder, class, type, error);
+}
+
 void
 g_variant_builder_add_value (GVariantBuilder *builder,
                              GVariant        *value)
 {
-  const GVariantType *type = g_variant_get_type (value);
   GError *error = NULL;
 
-  if G_UNLIKELY (!g_variant_builder_check_add (builder,
-                                               g_variant_type_get_natural_class (type),
-                                                type, &error))
+  if G_UNLIKELY (!g_variant_builder_check_add_value (builder, value, &error))
     g_error ("g_variant_builder_add_value: %s", error->message);
 
   builder->trusted &= g_variant_is_normalised (value);
 
-  if (builder->type == NULL)
-    {
-      if (builder->class == G_VARIANT_TYPE_CLASS_MAYBE)
-        {
-          builder->type = g_variant_type_new_maybe (type);
-          builder->expected = g_variant_type_element (builder->type);
-        }
-      else if (builder->class == G_VARIANT_TYPE_CLASS_ARRAY)
-        {
-          builder->type = g_variant_type_new_array (type);
-          builder->expected = g_variant_type_element (builder->type);
-        }
-    }
-  else
-    {
-      if (builder->class == G_VARIANT_TYPE_CLASS_VARIANT)
-        {
-          if (builder->expected)
-            g_variant_type_free (builder->expected);
-          builder->expected = NULL;
-        }
-      else if (builder->type == G_VARIANT_TYPE_CLASS_STRUCT ||
-               builder->type == G_VARIANT_TYPE_CLASS_DICT_ENTRY)
-        builder->expected = g_signature_next (builder->expected);
-    }
+  if (builder->expected &&
+      (builder->class == G_VARIANT_TYPE_CLASS_STRUCT ||
+       builder->class == G_VARIANT_TYPE_CLASS_DICT_ENTRY))
+    builder->expected = g_variant_type_next (builder->expected);
 
   if (builder->offset == builder->children_allocated)
     g_variant_builder_resize (builder, builder->children_allocated * 2);
@@ -560,35 +550,37 @@ g_variant_builder_add_value (GVariantBuilder *builder,
 
 void
 g_variant_builder_add (GVariantBuilder *builder,
-                       const char      *signature,
+                       const gchar     *type_string,
                        ...)
 {
   GVariant *variant;
   va_list ap;
 
-  va_start (ap, signature);
-  variant = g_variant_vnew (g_signature (signature), ap);
+  va_start (ap, type_string);
+  variant = g_variant_vnew (G_VARIANT_TYPE (type_string), ap);
   va_end (ap);
 
   g_variant_builder_add_value (builder, variant);
 }
 
 GVariantBuilder *
-g_variant_builder_open (GVariantBuilder *parent,
-                        GSignatureType   type,
-                        GSignature       signature)
+g_variant_builder_open (GVariantBuilder    *parent,
+                        GVariantTypeClass   class,
+                        const GVariantType *type)
 {
   GVariantBuilder *child;
   GError *error = NULL;
 
-  if (G_UNLIKELY (!g_variant_builder_check_add (parent, type,
-                                                signature, &error)))
+  if G_UNLIKELY (!g_variant_builder_check_add (parent, class, type, &error))
     g_error ("g_variant_builder_open: %s", error->message);
 
-  if (type != G_VARIANT_TYPE_CLASS_VARIANT && signature == NULL)
-    signature = parent->expected; /* possibly still NULL */
+  if G_UNLIKELY (parent->has_child)
+    g_error ("GVariantBuilder already has open child");
 
-  child = g_variant_builder_new (type, signature);
+  if (class != G_VARIANT_TYPE_CLASS_VARIANT && type == NULL)
+    type = parent->expected; /* possibly still NULL */
+
+  child = g_variant_builder_new (class, type);
   parent->has_child = TRUE;
   child->parent = parent;
 
@@ -614,60 +606,61 @@ g_variant_builder_close (GVariantBuilder *child)
 }
 
 GVariantBuilder *
-g_variant_builder_new (GSignatureType type,
-                       GSignature     signature)
+g_variant_builder_new (GVariantTypeClass   class,
+                       const GVariantType *type)
 {
   GVariantBuilder *builder;
 
-  g_assert (type != G_VARIANT_TYPE_CLASS_INVALID);
-  g_assert (signature == NULL ||
-            type == G_VARIANT_TYPE_CLASS_VARIANT ||
-            g_signature_type (signature) == type);
-  g_assert (signature == NULL ||
-            g_signature_concrete (signature));
+  g_assert (type == NULL || g_variant_type_is_concrete (type));
+  g_assert (class == G_VARIANT_TYPE_CLASS_VARIANT ||
+            type == NULL || g_variant_type_is_of_class (type, class));
 
   builder = g_slice_new (GVariantBuilder);
   builder->parent = NULL;
   builder->offset = 0;
   builder->has_child = FALSE;
-  builder->type = type;
-  builder->signature = signature ? g_signature_copy (signature) : NULL;
+  builder->class = class;
+  builder->type = type ? g_variant_type_copy (type) : NULL;
   builder->expected = NULL;
   builder->trusted = TRUE;
 
-  switch (type)
+  switch (class)
   {
     case G_VARIANT_TYPE_CLASS_VARIANT:
-      builder->expected = builder->signature;
-      builder->signature = g_signature_copy (G_VARIANT_TYPE_VARIANT);
-      builder->children = g_slice_new (GVariant *);
       builder->children_allocated = 1;
+      builder->expected = builder->type;
       return builder;
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
       builder->children_allocated = 8;
+      if (builder->type)
+        builder->expected = g_variant_type_element (builder->type);
       break;
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
       builder->children_allocated = 1;
+      if (builder->type)
+        builder->expected = g_variant_type_element (builder->type);
       break;
 
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       builder->children_allocated = 2;
+      if (builder->type)
+        builder->expected = g_variant_type_key (builder->type);
       break;
 
     case G_VARIANT_TYPE_CLASS_STRUCT:
       builder->children_allocated = 8;
+      if (builder->type)
+        builder->expected = g_variant_type_first (builder->type);
       break;
 
     default:
       g_error ("g_variant_builder_new() works only with container types");
    }
+
   builder->children = g_slice_alloc (sizeof (GVariant *) *
                                      builder->children_allocated);
-
-  if (signature)
-    builder->expected = g_signature_open_blindly (signature);
 
   return builder;
 }
@@ -675,53 +668,58 @@ g_variant_builder_new (GSignatureType type,
 GVariant *
 g_variant_builder_end (GVariantBuilder *builder)
 {
+  GVariantType *my_type;
   GError *error = NULL;
-  GSVHelper *helper;
   GVariant *value;
 
-  if (G_UNLIKELY (!g_variant_builder_check_end (builder, &error)))
+  if G_UNLIKELY (!g_variant_builder_check_end (builder, &error))
     g_error ("g_variant_builder_end: %s", error->message);
-
-  g_assert (builder->has_child == FALSE);
-  g_assert (builder->parent == NULL);
 
   g_variant_builder_resize (builder, builder->offset);
 
-  if (builder->signature == NULL)
+  if (builder->class == G_VARIANT_TYPE_CLASS_VARIANT)
     {
-      GSignature *signatures;
-      int i;
-
-      signatures = g_newa (GSignature, builder->offset);
-
-      for (i = 0; i < builder->offset; i++)
-        signatures[i] = g_variant_get_signature (builder->children[i]);
-
-      if (builder->type == G_VARIANT_TYPE_CLASS_DICT_ENTRY)
-        {
-          g_assert (builder->offset == 2);
-          builder->signature = g_signature_dictify (signatures[0],
-                                                    signatures[1]);
-        }
-      else if (builder->type == G_VARIANT_TYPE_CLASS_STRUCT)
-        {
-          builder->signature = g_signature_structify (signatures,
-                                                      builder->offset);
-        }
-      else
-        g_error ("signature not set on dict-entry/struct?");
+      my_type = g_variant_type_copy (G_VARIANT_TYPE_VARIANT);
+      if (builder->type)
+        g_variant_type_free (builder->type);
     }
   else
+    my_type = builder->type;
+
+  if (my_type == NULL)
+    switch (builder->class)
     {
-      if (builder->type == G_VARIANT_TYPE_CLASS_VARIANT && builder->expected)
-        g_signature_free (builder->expected);
+      case G_VARIANT_TYPE_CLASS_ARRAY:
+        my_type = g_variant_type_new_array (
+                    g_variant_get_type (builder->children[0]));
+        break;
+
+      case G_VARIANT_TYPE_CLASS_MAYBE:
+        my_type = g_variant_type_new_maybe (
+                    g_variant_get_type (builder->children[0]));
+        break;
+
+      case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
+        my_type = g_variant_type_new_dict_entry (
+                    g_variant_get_type (builder->children[0]),
+                    g_variant_get_type (builder->children[1]));
+        break;
+
+      case G_VARIANT_TYPE_CLASS_STRUCT:
+        my_type = g_variant_type_new_struct (builder->children,
+                                             g_variant_get_type,
+                                             builder->offset);
+        break;
+
+      default:
+        g_assert_not_reached ();
     }
 
-  helper = g_svhelper_get (builder->signature);
-  value = g_variant_new_tree (helper, builder->children,
+  value = g_variant_new_tree (my_type, builder->children,
                               builder->offset, builder->trusted);
-  g_signature_free (builder->signature);
+
   g_slice_free (GVariantBuilder, builder);
+  g_variant_type_free (my_type);
 
   return value;
 }
@@ -731,8 +729,10 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
                              GError          **error)
 {
   g_assert (builder != NULL);
+  g_assert (builder->has_child == FALSE);
+  g_assert (builder->parent == NULL);
 
-  switch (builder->type)
+  switch (builder->class)
   {
     case G_VARIANT_TYPE_CLASS_VARIANT:
       if (builder->offset < 1)
@@ -744,16 +744,18 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
       break;
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
-      if (builder->signature == NULL)
+      if (builder->type == NULL ||
+          !g_variant_type_is_concrete (builder->type))
         {
           g_set_error (error, 0, 0,
-                       "unable to infer signature for empty array");
+                       "unable to infer type for empty array");
           return FALSE;
         }
       break;
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
-      if (builder->signature == NULL)
+      if (builder->type == NULL ||
+          !g_variant_type_is_concrete (builder->type))
         {
           g_set_error (error, 0, 0,
                        "unable to infer signature for maybe with no value");
@@ -773,15 +775,15 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
     case G_VARIANT_TYPE_CLASS_STRUCT:
       if (builder->expected)
         {
-          char *signature_string;
+          gchar *type_string;
 
-          signature_string = g_signature_get (builder->signature);
+          type_string = g_variant_type_dup_string (builder->type);
           g_set_error (error, 0, 0,
                        "a structure of type %s must contain %d children "
-                       "but only %d have been given", signature_string,
-                       g_signature_items (builder->signature),
+                       "but only %d have been given", type_string,
+                       g_variant_type_n_items (builder->type),
                        builder->offset);
-          g_free (signature_string);
+          g_free (type_string);
 
           return FALSE;
         }
@@ -795,81 +797,101 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
 }
 
 gboolean
-g_variant_builder_check_add (GVariantBuilder  *builder,
-                             GSignatureType    type,
-                             GSignature        signature,
-                             GError          **error)
+g_variant_builder_check_add (GVariantBuilder     *builder,
+                             GVariantTypeClass    class,
+                             const GVariantType  *type,
+                             GError             **error)
 {
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
   g_assert (type != G_VARIANT_TYPE_CLASS_INVALID);
 
-  if (type == G_VARIANT_TYPE_CLASS_VARIANT)
-    signature = NULL;
+  if (class == G_VARIANT_TYPE_CLASS_VARIANT)
+    type = NULL;
 
-  if (signature && g_signature_type (signature) != type)
+  if (type && !g_variant_type_is_concrete (type))
     {
-      char *signature_str;
+      gchar *type_str;
 
-      signature_str = g_signature_get (signature);
-      g_set_error (error, 0, 0,
-                   "signature '%s' is not of correct type", signature_str);
-      g_free (signature_str);
+      type_str = g_variant_type_dup_string (type);
+      g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                   G_VARIANT_BUILDER_ERROR_TYPE,
+                   "type '%s' is not a concrete type", type_str);
+      g_free (type_str);
       return FALSE;
     }
 
-  if (signature && !g_signature_concrete (signature))
+  if (g_variant_type_get_natural_class (type) != class)
     {
-      char *signature_str;
+      gchar *type_str;
 
-      signature_str = g_signature_get (signature);
-      g_set_error (error, 0, 0,
-                   "signature '%s' is not concrete", signature_str);
-      g_free (signature_str);
+      type_str = g_variant_type_dup_string (type);
+      g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                   G_VARIANT_BUILDER_ERROR_TYPE,
+                   "type '%s' is not of the correct class", type_str);
+      g_free (type_str);
+      return FALSE;
+    }
+  /* we now know that class is the natural class of a concrete type */
+
+  if (builder->expected &&
+      !g_variant_type_is_of_class (builder->expected, class))
+    {
+      g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                   G_VARIANT_BUILDER_ERROR_TYPE,
+                   "expecting value of class '%c', not '%c'",
+                   g_variant_type_get_natural_class (builder->expected),
+                   class);
       return FALSE;
     }
 
-  if (builder->expected && g_signature_type (builder->expected) != type)
+  if (builder->expected && type &&
+      !g_variant_type_matches (type, builder->expected))
     {
-      g_set_error (error, 0, 0,
-                   "expecting value of type '%c', not '%c'",
-                   g_signature_type (builder->expected), type);
-      return FALSE;
-    }
+      gchar *expected_str, *type_str;
 
-  if (builder->expected && signature &&
-      !g_signature_equal (builder->expected, signature))
-    {
-      char *signature_str, *expected_str;
-
-      signature_str = g_signature_get (signature);
-      expected_str = g_signature_get (builder->expected);
-      g_set_error (error, 0, 0,
-                   "signature '%s' does not match expected signature '%s'",
-                   signature_str, expected_str);
-      g_free (signature_str);
+      expected_str = g_variant_type_dup_string (builder->expected);
+      type_str = g_variant_type_dup_string (type);
+      g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                   G_VARIANT_BUILDER_ERROR_TYPE,
+                   "type '%s' does not match expected type '%s'",
+                   type_str, expected_str);
       g_free (expected_str);
+      g_free (type_str);
       return FALSE;
     }
 
-  switch (builder->type)
+  switch (builder->class)
   {
     case G_VARIANT_TYPE_CLASS_VARIANT:
       if (builder->offset)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_MANY,
                        "a variant cannot contain more than one value");
           return FALSE;
         }
       break;
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
+      if (builder->expected == NULL && type && builder->offset &&
+          !g_variant_matches (builder->children[0], type))
+        /* builder type not explicitly specified, but the array has
+         * one item in it already, so the others must match...
+         */
+        {
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TYPE,
+                       "all items in an array must have the same type");
+          return FALSE;
+        }
       break;
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
       if (builder->offset)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_MANY,
                        "a maybe cannot contain more than one value");
           return FALSE;
         }
@@ -878,15 +900,17 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       if (builder->offset > 1)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_MANY,
                        "a dictionary entry may have only a key and a value");
           return FALSE;
         }
       else if (builder->offset == 0)
         {
-          if (!g_signature_type_is_basic (type))
+          if (!g_variant_type_class_is_basic (class))
             {
-              g_set_error (error, 0, 0,
+              g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                           G_VARIANT_BUILDER_ERROR_TYPE,
                            "dictionary entry key must be a basic type");
               return FALSE;
             }
@@ -894,15 +918,16 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
       break;
 
     case G_VARIANT_TYPE_CLASS_STRUCT:
-      if (builder->signature && builder->expected == NULL)
+      if (builder->type && builder->expected == NULL)
         {
-          char *signature_str;
+          gchar *type_str;
 
-          signature_str = g_signature_get (builder->signature);
-          g_set_error (error, 0, 0,
+          type_str = g_variant_type_dup_string (builder->type);
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_MANY,
                        "too many items (%d) for this structure type '%s'",
-                       builder->offset + 1, signature_str);
-          g_free (signature_str);
+                       builder->offset + 1, type_str);
+          g_free (type_str);
 
           return FALSE;
         }
@@ -916,7 +941,7 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
 }
 
 void
-g_variant_builder_abort (GVariantBuilder *builder)
+g_variant_builder_cancel (GVariantBuilder *builder)
 {
   GVariantBuilder *parent;
 
@@ -924,7 +949,7 @@ g_variant_builder_abort (GVariantBuilder *builder)
 
   do
     {
-      int i;
+      gsize i;
 
       for (i = 0; i < builder->offset; i++)
         g_variant_unref (builder->children[i]);
@@ -932,8 +957,8 @@ g_variant_builder_abort (GVariantBuilder *builder)
       g_slice_free1 (sizeof (GVariant *) * builder->children_allocated,
                      builder->children);
 
-      if (builder->signature)
-        g_signature_free (builder->signature);
+      if (builder->type)
+        g_variant_type_free (builder->type);
 
       parent = builder->parent;
       g_slice_free (GVariantBuilder, builder);

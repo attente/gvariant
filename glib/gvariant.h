@@ -132,7 +132,7 @@ gboolean                        g_variant_builder_check_end             (GVarian
 GVariantBuilder                *g_variant_builder_new                   (GVariantTypeClass     class,
                                                                          const GVariantType   *type);
 GVariant                       *g_variant_builder_end                   (GVariantBuilder      *builder);
-void                            g_variant_builder_abort                 (GVariantBuilder      *builder);
+void                            g_variant_builder_cancel                (GVariantBuilder      *builder);
 
 /* markup printing/parsing */
 GString                        *g_variant_markup_print                  (GVariant             *value,
@@ -157,8 +157,8 @@ typedef enum
 {
   G_VARIANT_BUILDER_ERROR_TOO_MANY,
   G_VARIANT_BUILDER_ERROR_TOO_FEW,
-  G_VARIANT_BUILDER_ERROR_CANNOT_INFER,
-  G_VARIANT_BUILDER_ERROR_DOES_NOT_FIT
+  G_VARIANT_BUILDER_ERROR_INFER,
+  G_VARIANT_BUILDER_ERROR_TYPE
 } GVariantBuilderError;
 
 #endif /* _gvariant_h_ */

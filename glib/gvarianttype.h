@@ -330,9 +330,9 @@ gboolean                        g_variant_type_destruct                 (const G
 GVariantType                   *g_variant_type_new_array                (const GVariantType  *element);
 GVariantType                   *g_variant_type_new_maybe                (const GVariantType  *element);
 typedef const GVariantType   *(*GVariantTypeGetter)                     (gpointer             data);
-GVariantType                   *g_variant_type_new_struct               (const gpointer      *items,
-                                                                         gsize                length,
-                                                                         GVariantTypeGetter   func);
+GVariantType                   *_g_variant_type_new_struct              (const gpointer      *items,
+                                                                         GVariantTypeGetter   func,
+                                                                         gsize                length);
 GVariantType                   *g_variant_type_new_dict_entry           (const GVariantType  *key,
                                                                          const GVariantType  *value);
 
@@ -343,5 +343,9 @@ const GVariantType             *_g_variant_type_check_string            (const g
 
 #define G_VARIANT_TYPE(type_string) \
   (_g_variant_type_check_string (type_string))
+
+#define g_variant_type_new_struct(array, func, length) \
+  (_g_variant_type_new_struct ((const gpointer *) array, (GVariantTypeGetter) (1 ? func : \
+                               (const GVariantType *(*)(typeof (array[0]))) NULL), length))
 
 #endif /* _gvarianttype_h_ */
