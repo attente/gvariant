@@ -1,11 +1,15 @@
 /*
- * Copyright © 2008 Ryan Lortie
+ * Copyright © 2007, 2008 Ryan Lortie
  *
- * All rights reserved.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of version 3 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * See the included COPYING file for more information.
  */
 
-#ifndef _gsvariant_h_
-#define _gsvariant_h_
+#ifndef _gvariant_serialiser_h_
+#define _gvariant_serialiser_h_
 
 #include "gvarianttypeinfo.h"
 
@@ -40,18 +44,4 @@ void                            g_variant_serialised_assert_invariant   (GVarian
 gboolean                        g_variant_serialised_is_normalised      (GVariantSerialised        value);
 void                            g_variant_serialised_byteswap           (GVariantSerialised        value);
 
-#if 0
-static inline GSVariant
-g_svariant (GSVHelper *helper,
-            guchar    *data,
-            gsize      size)
-{
-  GSVariant value = { helper, data, size };
-
-  g_svariant_assert_invariant (value);
-
-  return value;
-}
-#endif
-
-#endif /* _gsvariant_h_ */
+#endif /* _gvariant_serialiser_h_ */
