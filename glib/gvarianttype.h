@@ -315,7 +315,7 @@ gboolean                        g_variant_type_class_is_basic           (GVarian
 const GVariantType             *g_variant_type_element                  (const GVariantType  *type);
 const GVariantType             *g_variant_type_first                    (const GVariantType  *type);
 const GVariantType             *g_variant_type_next                     (const GVariantType  *type);
-gsize                          *g_variant_type_n_items                  (const GVariantType  *type);
+gsize                           g_variant_type_n_items                  (const GVariantType  *type);
 const GVariantType             *g_variant_type_key                      (const GVariantType  *type);
 const GVariantType             *g_variant_type_value                    (const GVariantType  *type);
 

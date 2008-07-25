@@ -29,7 +29,7 @@ g_variant_type_check (const GVariantType *type)
  * @limit: the end of @string, or %NULL
  * @returns: %TRUE if a valid type string was found
  *
- * Scan for a single complete and valid #GVariant type string in
+ * Scan for a single complete and valid #GVariantType type string in
  * @type_string.  The memory pointed to by @limit (or bytes beyond it)
  * is never accessed.
  *
@@ -101,8 +101,8 @@ g_variant_type_string_scan (const gchar **type_string,
  * @type_string: a pointer to any string
  * @returns: %TRUE if @type_string is exactly one valid type string
  *
- * Checks if @type_string is a valid #GVariant type string.  This call
- * is equivalent to calling g_variant_type_string_scan() and
+ * Checks if @type_string is a valid #GVariantType type string.  This
+ * call is equivalent to calling g_variant_type_string_scan() and
  * confirming that the following character is a nul terminator.
  **/
 gboolean
@@ -146,7 +146,7 @@ g_variant_type_copy (const GVariantType *type)
 
 /**
  * g_variant_type_new:
- * @type_string: a valid #GVariant type string
+ * @type_string: a valid #GVariantType type string
  * @returns: a new #GVariantType
  *
  * Creates a new #GVariantType corresponding to the type string given
@@ -254,9 +254,7 @@ g_variant_type_is_concrete (const GVariantType *type)
   gsize i;
 
   for (i = 0; i < type_length; i++)
-    if (type_string[i] == '*' || type_string[i] == '?' ||
-        type_string[i] == '@' || type_string[i] == '&' ||
-        type_string[i] == 'r' || type_string[i] == 'e')
+    if (strchr ("*?@&re", type_string[i]))
       return FALSE;
 
   return TRUE;
@@ -472,47 +470,8 @@ g_variant_type_matches (const GVariantType *type,
         {
           const GVariantType *target_type = G_VARIANT_TYPE (type_string);
 
-          switch (pattern_char)
-          {
-            case '*':
-              break;
-
-            case '@':
-              if (!g_variant_type_is_fixed_size (target_type))
-                return FALSE;
-
-              break;
-
-            case '&':
-              if (!g_variant_type_is_fixed_size (target_type) ||
-                  !g_variant_type_is_basic (target_type))
-                return FALSE;
-
-              break;
-
-            case '?':
-              if (!g_variant_type_is_basic (target_type))
-                return FALSE;
-
-              break;
-
-            case 'e':
-              if (!g_variant_type_is_of_class (target_type,
-                                               G_VARIANT_TYPE_CLASS_DICT_ENTRY))
-                return FALSE;
-
-              break;
-
-            case 'r':
-              if (!g_variant_type_is_of_class (target_type,
-                                               G_VARIANT_TYPE_CLASS_STRUCT))
-                  return FALSE;
-
-              break;
-
-            default:
-              return FALSE;
-          }
+          if (!g_variant_type_is_of_class (target_type, pattern_char))
+            return FALSE;
 
           type_string += g_variant_type_get_string_length (target_type);
         }
@@ -526,9 +485,6 @@ g_variant_type_is_of_class (const GVariantType *type,
                             GVariantTypeClass   class)
 {
   char first_char = *(const gchar *) type;
-
-  if (first_char == class)
-    return TRUE;
 
   switch (class)
   {
@@ -552,7 +508,7 @@ g_variant_type_is_of_class (const GVariantType *type,
       return first_char == '{';
 
     default:
-      return FALSE;
+      return class == first_char;
   }
 }
 
@@ -608,11 +564,78 @@ g_variant_type_class_is_basic (GVariantTypeClass class)
     case G_VARIANT_TYPE_CLASS_STRING:
     case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
     case G_VARIANT_TYPE_CLASS_SIGNATURE:
+    case G_VARIANT_TYPE_CLASS_BASIC:
+    case G_VARIANT_TYPE_CLASS_FIXED_BASIC:
       return TRUE;
 
     default:
       return FALSE;
   }
+}
+
+const GVariantType *
+g_variant_type_element (const GVariantType *type)
+{
+  const gchar *type_string = g_variant_type_peek_string (type);
+
+  g_assert (type_string[0] == 'a' || type_string[0] == 'm');
+
+  return (const GVariantType *) &type_string[1];
+}
+
+const GVariantType *
+g_variant_type_first (const GVariantType *type)
+{
+  const gchar *type_string = g_variant_type_peek_string (type);
+
+  g_assert (type_string[0] == '(' || type_string[0] == '{');
+
+  if (type_string[1] == ')')
+    return NULL;
+
+  return (const GVariantType *) &type_string[1];
+}
+
+const GVariantType *
+g_variant_type_next (const GVariantType *type)
+{
+  const gchar *type_string = g_variant_type_peek_string (type);
+  
+  type_string += g_variant_type_get_string_length (type);
+
+  if (*type_string == ')')
+    return NULL;
+
+  return (const GVariantType *) type_string;
+}
+
+gsize
+g_variant_type_n_items (const GVariantType *type)
+{
+  gsize count = 0;
+
+  type = g_variant_type_first (type);
+  do
+    count++;
+  while ((type = g_variant_type_next (type)));
+
+  return count;
+}
+
+const GVariantType *
+g_variant_type_key (const GVariantType *type)
+{
+  const gchar *type_string = g_variant_type_peek_string (type);
+
+  g_assert (type_string[0] == '{');
+
+  return (const GVariantType *) &type_string[1];
+}
+
+const GVariantType *
+g_variant_type_value (const GVariantType *type)
+{
+  return g_variant_type_next (g_variant_type_key (type));
 }
 
 GVariantType *
