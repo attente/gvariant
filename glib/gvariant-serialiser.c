@@ -8,7 +8,7 @@
  * See the included COPYING file for more information.
  */
 
-#include "gsvariant.h"
+#include "gvarianttypeinfo.h"
 
 #include <string.h>
 #include <glib.h>
