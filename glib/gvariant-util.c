@@ -152,7 +152,7 @@ g_variant_iter_next (GVariantIter *iter)
  **/
 gboolean
 g_variant_iterate (GVariantIter *iter,
-                   const char   *signature_string,
+                   const gchar  *type_string,
                    ...)
 {
   GVariant *value;
@@ -163,8 +163,8 @@ g_variant_iterate (GVariantIter *iter,
   if (value == NULL)
     return FALSE;
 
-  va_start (ap, signature_string);
-  g_variant_vget (value, TRUE, g_signature (signature_string), ap);
+  va_start (ap, type_string);
+  g_variant_vget (value, TRUE, G_VARIANT_TYPE (type_string), ap);
   va_end (ap);
 
   g_variant_unref (value);
@@ -183,10 +183,10 @@ g_variant_iterate (GVariantIter *iter,
  * g_signature_matches().
  **/
 gboolean
-g_variant_matches (GVariant   *value,
-                   GSignature  pattern)
+g_variant_matches (GVariant           *value,
+                   const GVariantType *pattern)
 {
-  return g_signature_matches (g_variant_get_signature (value), pattern);
+  return g_variant_type_matches (g_variant_get_type (value), pattern);
 }
 
 /**
@@ -201,55 +201,55 @@ g_variant_new_boolean (gboolean boolean)
 {
   guint8 byte = !!boolean;
 
-  return g_variant_new_small (G_SIGNATURE_BOOLEAN, &byte, 1);
+  return g_variant_new_small (G_VARIANT_TYPE_BOOLEAN, &byte, 1);
 }
 
 GVariant *
 g_variant_new_byte (guint8 byte)
 {
-  return g_variant_new_small (G_SIGNATURE_BYTE, &byte, 1);
+  return g_variant_new_small (G_VARIANT_TYPE_BYTE, &byte, 1);
 }
 
 GVariant *
 g_variant_new_uint16 (guint16 uint16)
 {
-  return g_variant_new_small (G_SIGNATURE_UINT16, &uint16, 2);
+  return g_variant_new_small (G_VARIANT_TYPE_UINT16, &uint16, 2);
 }
 
 GVariant *
 g_variant_new_int16 (gint16 int16)
 {
-  return g_variant_new_small (G_SIGNATURE_INT16, &int16, 2);
+  return g_variant_new_small (G_VARIANT_TYPE_INT16, &int16, 2);
 }
 
 GVariant *
 g_variant_new_uint32 (guint32 uint32)
 {
-  return g_variant_new_small (G_SIGNATURE_UINT32, &uint32, 4);
+  return g_variant_new_small (G_VARIANT_TYPE_UINT32, &uint32, 4);
 }
 
 GVariant *
 g_variant_new_int32 (gint32 int32)
 {
-  return g_variant_new_small (G_SIGNATURE_INT32, &int32, 4);
+  return g_variant_new_small (G_VARIANT_TYPE_INT32, &int32, 4);
 }
 
 GVariant *
 g_variant_new_uint64 (guint64 uint64)
 {
-  return g_variant_new_small (G_SIGNATURE_UINT64, &uint64, 8);
+  return g_variant_new_small (G_VARIANT_TYPE_UINT64, &uint64, 8);
 }
 
 GVariant *
 g_variant_new_int64 (gint64 int64)
 {
-  return g_variant_new_small (G_SIGNATURE_INT64, &int64, 8);
+  return g_variant_new_small (G_VARIANT_TYPE_INT64, &int64, 8);
 }
 
 GVariant *
 g_variant_new_double (gdouble floating)
 {
-  return g_variant_new_small (G_SIGNATURE_DOUBLE, &floating, 8);
+  return g_variant_new_small (G_VARIANT_TYPE_DOUBLE, &floating, 8);
 }
 
 /**
@@ -262,7 +262,7 @@ g_variant_new_double (gdouble floating)
 GVariant *
 g_variant_new_string (const char *string)
 {
-  return g_variant_load (G_SIGNATURE_STRING, string, strlen (string) + 1, 0);
+  return g_variant_load (G_VARIANT_TYPE_STRING, string, strlen (string) + 1, 0);
 }
 
 /**
@@ -276,14 +276,14 @@ g_variant_new_string (const char *string)
 GVariant *
 g_variant_new_object_path (const char *string)
 {
-  return g_variant_load (G_SIGNATURE_OBJECT_PATH,
+  return g_variant_load (G_VARIANT_TYPE_OBJECT_PATH,
                          string, strlen (string) + 1, 0);
 }
 
 GVariant *
 g_variant_new_signature (const char *string)
 {
-  return g_variant_load (G_SIGNATURE_SIGNATURE,
+  return g_variant_load (G_VARIANT_TYPE_SIGNATURE,
                          string, strlen (string) + 1, 0);
 }
 
@@ -303,8 +303,9 @@ g_variant_new_variant (GVariant *value)
   children = g_slice_new (GVariant *);
   children[0] = value;
 
-  return g_variant_new_tree (g_svhelper_get (G_SIGNATURE_VARIANT),
-                             children, 1, g_variant_is_normalised (value));
+  return g_variant_new_tree (G_VARIANT_TYPE_VARIANT,
+                             children, 1,
+                             g_variant_is_normalised (value));
 }
 
 /**
@@ -322,7 +323,7 @@ g_variant_get_boolean (GVariant *value)
 {
   guint8 byte;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_BOOLEAN));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_BOOLEAN));
   g_variant_store (value, &byte);
 
   return byte;
@@ -343,7 +344,7 @@ g_variant_get_byte (GVariant *value)
 {
   guint8 byte;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_BYTE));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_BYTE));
   g_variant_store (value, &byte);
 
   return byte;
@@ -364,7 +365,7 @@ g_variant_get_uint16 (GVariant *value)
 {
   guint16 uint16;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_UINT16));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT16));
   g_variant_store (value, &uint16);
 
   return uint16;
@@ -375,7 +376,7 @@ g_variant_get_int16 (GVariant *value)
 {
   gint16 int16;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_INT16));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_INT16));
   g_variant_store (value, &int16);
 
   return int16;
@@ -386,7 +387,7 @@ g_variant_get_uint32 (GVariant *value)
 {
   guint32 uint32;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_UINT32));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT32));
   g_variant_store (value, &uint32);
 
   return uint32;
@@ -397,7 +398,7 @@ g_variant_get_int32 (GVariant *value)
 {
   gint32 int32;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_INT32));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_INT32));
   g_variant_store (value, &int32);
 
   return int32;
@@ -408,7 +409,7 @@ g_variant_get_uint64 (GVariant *value)
 {
   guint64 uint64;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_UINT64));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT64));
   g_variant_store (value, &uint64);
 
   return uint64;
@@ -419,7 +420,7 @@ g_variant_get_int64 (GVariant *value)
 {
   gint64 int64;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_INT64));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_INT64));
   g_variant_store (value, &int64);
 
   return int64;
@@ -430,7 +431,7 @@ g_variant_get_double (GVariant *value)
 {
   gdouble floating;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_DOUBLE));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_DOUBLE));
   g_variant_store (value, &floating);
 
   return floating;
@@ -440,9 +441,9 @@ const char *
 g_variant_get_string (GVariant *value,
                       gsize    *length)
 {
-  g_assert (g_variant_matches (value, G_SIGNATURE_STRING) ||
-            g_variant_matches (value, G_SIGNATURE_OBJECT_PATH) ||
-            g_variant_matches (value, G_SIGNATURE_SIGNATURE));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_STRING) ||
+            g_variant_matches (value, G_VARIANT_TYPE_OBJECT_PATH) ||
+            g_variant_matches (value, G_VARIANT_TYPE_SIGNATURE));
 
   if (length)
     *length = g_variant_get_size (value) - 1;
@@ -456,9 +457,9 @@ g_variant_dup_string (GVariant *value,
 {
   int size;
 
-  g_assert (g_variant_matches (value, G_SIGNATURE_STRING) ||
-            g_variant_matches (value, G_SIGNATURE_OBJECT_PATH) ||
-            g_variant_matches (value, G_SIGNATURE_SIGNATURE));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_STRING) ||
+            g_variant_matches (value, G_VARIANT_TYPE_OBJECT_PATH) ||
+            g_variant_matches (value, G_VARIANT_TYPE_SIGNATURE));
 
   size = g_variant_get_size (value);
 
@@ -471,7 +472,7 @@ g_variant_dup_string (GVariant *value,
 GVariant *
 g_variant_get_variant (GVariant *value)
 {
-  g_assert (g_variant_matches (value, G_SIGNATURE_VARIANT));
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_VARIANT));
 
   return g_variant_get_child (value, 0);
 }
@@ -480,9 +481,9 @@ struct OPAQUE_TYPE__GVariantBuilder
 {
   GVariantBuilder *parent;
 
-  GSignatureType type;
-  GSignature signature;
-  GSignature expected;
+  GVariantTypeClass class;
+  const GVariantType *type;
+  const GVariantType *expected;
 
   GVariant **children;
   int children_allocated;
@@ -515,39 +516,39 @@ void
 g_variant_builder_add_value (GVariantBuilder *builder,
                              GVariant        *value)
 {
-  GSignature signature = g_variant_get_signature (value);
+  const GVariantType *type = g_variant_get_type (value);
   GError *error = NULL;
 
-  if (G_UNLIKELY (!g_variant_builder_check_add (builder,
-                                                g_signature_type (signature),
-                                                signature, &error)))
+  if G_UNLIKELY (!g_variant_builder_check_add (builder,
+                                               g_variant_type_get_natural_class (type),
+                                                type, &error))
     g_error ("g_variant_builder_add_value: %s", error->message);
 
   builder->trusted &= g_variant_is_normalised (value);
 
-  if (builder->signature == NULL)
+  if (builder->type == NULL)
     {
-      if (builder->type == G_SIGNATURE_TYPE_MAYBE)
+      if (builder->class == G_VARIANT_TYPE_CLASS_MAYBE)
         {
-          builder->signature = g_signature_maybeify (signature);
-          builder->expected = g_signature_element (builder->signature);
+          builder->type = g_variant_type_new_maybe (type);
+          builder->expected = g_variant_type_element (builder->type);
         }
-      else if (builder->type == G_SIGNATURE_TYPE_ARRAY)
+      else if (builder->class == G_VARIANT_TYPE_CLASS_ARRAY)
         {
-          builder->signature = g_signature_arrayify (signature);
-          builder->expected = g_signature_element (builder->signature);
+          builder->type = g_variant_type_new_array (type);
+          builder->expected = g_variant_type_element (builder->type);
         }
     }
   else
     {
-      if (builder->type == G_SIGNATURE_TYPE_VARIANT)
+      if (builder->class == G_VARIANT_TYPE_CLASS_VARIANT)
         {
           if (builder->expected)
-            g_signature_free (builder->expected);
+            g_variant_type_free (builder->expected);
           builder->expected = NULL;
         }
-      else if (builder->type == G_SIGNATURE_TYPE_STRUCT ||
-               builder->type == G_SIGNATURE_TYPE_DICT_ENTRY)
+      else if (builder->type == G_VARIANT_TYPE_CLASS_STRUCT ||
+               builder->type == G_VARIANT_TYPE_CLASS_DICT_ENTRY)
         builder->expected = g_signature_next (builder->expected);
     }
 
@@ -584,7 +585,7 @@ g_variant_builder_open (GVariantBuilder *parent,
                                                 signature, &error)))
     g_error ("g_variant_builder_open: %s", error->message);
 
-  if (type != G_SIGNATURE_TYPE_VARIANT && signature == NULL)
+  if (type != G_VARIANT_TYPE_CLASS_VARIANT && signature == NULL)
     signature = parent->expected; /* possibly still NULL */
 
   child = g_variant_builder_new (type, signature);
@@ -618,9 +619,9 @@ g_variant_builder_new (GSignatureType type,
 {
   GVariantBuilder *builder;
 
-  g_assert (type != G_SIGNATURE_TYPE_INVALID);
+  g_assert (type != G_VARIANT_TYPE_CLASS_INVALID);
   g_assert (signature == NULL ||
-            type == G_SIGNATURE_TYPE_VARIANT ||
+            type == G_VARIANT_TYPE_CLASS_VARIANT ||
             g_signature_type (signature) == type);
   g_assert (signature == NULL ||
             g_signature_concrete (signature));
@@ -636,26 +637,26 @@ g_variant_builder_new (GSignatureType type,
 
   switch (type)
   {
-    case G_SIGNATURE_TYPE_VARIANT:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
       builder->expected = builder->signature;
-      builder->signature = g_signature_copy (G_SIGNATURE_VARIANT);
+      builder->signature = g_signature_copy (G_VARIANT_TYPE_VARIANT);
       builder->children = g_slice_new (GVariant *);
       builder->children_allocated = 1;
       return builder;
 
-    case G_SIGNATURE_TYPE_ARRAY:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
       builder->children_allocated = 8;
       break;
 
-    case G_SIGNATURE_TYPE_MAYBE:
+    case G_VARIANT_TYPE_CLASS_MAYBE:
       builder->children_allocated = 1;
       break;
 
-    case G_SIGNATURE_TYPE_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       builder->children_allocated = 2;
       break;
 
-    case G_SIGNATURE_TYPE_STRUCT:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
       builder->children_allocated = 8;
       break;
 
@@ -696,13 +697,13 @@ g_variant_builder_end (GVariantBuilder *builder)
       for (i = 0; i < builder->offset; i++)
         signatures[i] = g_variant_get_signature (builder->children[i]);
 
-      if (builder->type == G_SIGNATURE_TYPE_DICT_ENTRY)
+      if (builder->type == G_VARIANT_TYPE_CLASS_DICT_ENTRY)
         {
           g_assert (builder->offset == 2);
           builder->signature = g_signature_dictify (signatures[0],
                                                     signatures[1]);
         }
-      else if (builder->type == G_SIGNATURE_TYPE_STRUCT)
+      else if (builder->type == G_VARIANT_TYPE_CLASS_STRUCT)
         {
           builder->signature = g_signature_structify (signatures,
                                                       builder->offset);
@@ -712,7 +713,7 @@ g_variant_builder_end (GVariantBuilder *builder)
     }
   else
     {
-      if (builder->type == G_SIGNATURE_TYPE_VARIANT && builder->expected)
+      if (builder->type == G_VARIANT_TYPE_CLASS_VARIANT && builder->expected)
         g_signature_free (builder->expected);
     }
 
@@ -733,7 +734,7 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
 
   switch (builder->type)
   {
-    case G_SIGNATURE_TYPE_VARIANT:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
       if (builder->offset < 1)
         {
           g_set_error (error, 0, 0,
@@ -742,7 +743,7 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_ARRAY:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
       if (builder->signature == NULL)
         {
           g_set_error (error, 0, 0,
@@ -751,7 +752,7 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_MAYBE:
+    case G_VARIANT_TYPE_CLASS_MAYBE:
       if (builder->signature == NULL)
         {
           g_set_error (error, 0, 0,
@@ -760,7 +761,7 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       if (builder->offset < 2)
         {
           g_set_error (error, 0, 0,
@@ -769,7 +770,7 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_STRUCT:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
       if (builder->expected)
         {
           char *signature_string;
@@ -801,9 +802,9 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
 {
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
-  g_assert (type != G_SIGNATURE_TYPE_INVALID);
+  g_assert (type != G_VARIANT_TYPE_CLASS_INVALID);
 
-  if (type == G_SIGNATURE_TYPE_VARIANT)
+  if (type == G_VARIANT_TYPE_CLASS_VARIANT)
     signature = NULL;
 
   if (signature && g_signature_type (signature) != type)
@@ -853,7 +854,7 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
 
   switch (builder->type)
   {
-    case G_SIGNATURE_TYPE_VARIANT:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
       if (builder->offset)
         {
           g_set_error (error, 0, 0,
@@ -862,10 +863,10 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_ARRAY:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
       break;
 
-    case G_SIGNATURE_TYPE_MAYBE:
+    case G_VARIANT_TYPE_CLASS_MAYBE:
       if (builder->offset)
         {
           g_set_error (error, 0, 0,
@@ -874,7 +875,7 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       if (builder->offset > 1)
         {
           g_set_error (error, 0, 0,
@@ -892,7 +893,7 @@ g_variant_builder_check_add (GVariantBuilder  *builder,
         }
       break;
 
-    case G_SIGNATURE_TYPE_STRUCT:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
       if (builder->signature && builder->expected == NULL)
         {
           char *signature_str;

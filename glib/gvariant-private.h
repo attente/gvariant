@@ -12,28 +12,22 @@
 #define _gvariant_private_h_
 
 #include "gvariant-loadstore.h"
-#include "gsvhelper.h"
-
-#include <string.h>
-#include <glib.h>
+#include "gvarianttypeinfo.h"
 
 /* gvariant-core.c */
-gboolean        g_variant_has_signature         (GVariant         *variant,
-                                                 GSVHelper        *signature);
-GVariant       *g_variant_new_tree              (GSVHelper        *helper,
-                                                 GVariant        **children,
-                                                 gsize             n_children,
-                                                 gboolean          trusted);
-GVariant       *g_variant_new_small             (GSignature        signature,
-                                                 gpointer          data,
-                                                 gsize             size);
-void            g_variant_get_small             (GVariant         *value,
-                                                 gpointer          data,
-                                                 gsize             size);
-void            g_variant_ensure_native_endian  (GVariant         *value);
-
-void            g_variant_assert_invariant      (GVariant         *value);
-gboolean        g_variant_is_normalised         (GVariant         *value);
-GVariant       *g_variant_ensure_floating       (GVariant         *value);
+GVariant                       *g_variant_new_tree                      (const GVariantType  *type,
+                                                                         GVariant           **children,
+                                                                         gsize                n_children,
+                                                                         gboolean             trusted);
+GVariant                       *g_variant_new_small                     (const GVariantType  *type,
+                                                                         gpointer             data,
+                                                                         gsize                size);
+void                            g_variant_get_small                     (GVariant            *value,
+                                                                         gpointer             data,
+                                                                         gsize                size);
+void                            g_variant_ensure_native_endian          (GVariant            *value);
+void                            g_variant_assert_invariant              (GVariant            *value);
+gboolean                        g_variant_is_normalised                 (GVariant            *value);
+GVariant                       *g_variant_ensure_floating               (GVariant            *value);
 
 #endif /* _gvariant_private_h_ */

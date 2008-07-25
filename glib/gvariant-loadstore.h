@@ -25,19 +25,21 @@ typedef enum
   G_VARIANT_EMBED_SIGNATURE     = 16
 } GVariantFlags;
 
-GVariant       *g_variant_load                  (GSignature     signature,
-                                                 gconstpointer  data,
-                                                 gsize          size,
-                                                 GVariantFlags  flags);
-void            g_variant_store                 (GVariant      *value,
-                                                 gpointer       data);
-GVariant       *g_variant_normalise             (GVariant      *value);
-gconstpointer   g_variant_get_data              (GVariant      *value);
-gsize           g_variant_get_size              (GVariant      *value);
-GVariant       *g_variant_from_slice            (GSignature     signature,
-                                                 gpointer       slice,
-                                                 gsize          size,
-                                                 GVariantFlags  flags);
+GVariant                       *g_variant_load                          (const GVariantType *type,
+                                                                         gconstpointer       data,
+                                                                         gsize               size,
+                                                                         GVariantFlags       flags);
+GVariant                       *g_variant_from_slice                    (const GVariantType *type,
+                                                                         gpointer            slice,
+                                                                         gsize               size,
+                                                                         GVariantFlags       flags);
+
+void                            g_variant_store                         (GVariant           *value,
+                                                                         gpointer            data);
+gconstpointer                   g_variant_get_data                      (GVariant           *value);
+gsize                           g_variant_get_size                      (GVariant           *value);
+
+GVariant                       *g_variant_normalise                     (GVariant           *value);
 
 #pragma GCC visibility pop
 
