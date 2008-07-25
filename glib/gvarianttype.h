@@ -111,21 +111,21 @@ typedef enum
  *
  * The type of a value that can be either %TRUE or %FALSE.
  **/
-#define G_VARIANT_TYPE_BOOLEAN              ((GVariantType) "b")
+#define G_VARIANT_TYPE_BOOLEAN              ((const GVariantType *) "b")
 
 /**
  * G_VARIANT_TYPE_BYTE:
  *
  * The type of an integer value that can range from 0 to 255.
  **/
-#define G_VARIANT_TYPE_BYTE                 ((GVariantType) "y")
+#define G_VARIANT_TYPE_BYTE                 ((const GVariantType *) "y")
 
 /**
  * G_VARIANT_TYPE_INT16:
  *
  * The type of an integer value that can range from -32768 to 32767.
  **/
-#define G_VARIANT_TYPE_INT16                ((GVariantType) "n")
+#define G_VARIANT_TYPE_INT16                ((const GVariantType *) "n")
 
 /**
  * G_VARIANT_TYPE_UINT16:
@@ -134,7 +134,7 @@ typedef enum
  * If you had a compass, a ruler and an awful lot of patience, you
  * could construct a regular polygon with 65535 sides.
  **/
-#define G_VARIANT_TYPE_UINT16               ((GVariantType) "q")
+#define G_VARIANT_TYPE_UINT16               ((const GVariantType *) "q")
 
 /**
  * G_VARIANT_TYPE_INT32:
@@ -142,7 +142,7 @@ typedef enum
  * The type of an integer value that can range from -2147483648 to
  * 2147483647.
  **/
-#define G_VARIANT_TYPE_INT32                ((GVariantType) "i")
+#define G_VARIANT_TYPE_INT32                ((const GVariantType *) "i")
 
 /**
  * G_VARIANT_TYPE_UINT32:
@@ -150,7 +150,7 @@ typedef enum
  * The type of an integer value that can range from 0 to 4294967295.
  * That's one number for everyone who was around in the late 1970s.
  **/
-#define G_VARIANT_TYPE_UINT32               ((GVariantType) "u")
+#define G_VARIANT_TYPE_UINT32               ((const GVariantType *) "u")
 
 /**
  * G_VARIANT_TYPE_INT64:
@@ -158,7 +158,7 @@ typedef enum
  * The type of an integer value that can range from
  * -9223372036854775808 to 9223372036854775807.
  **/
-#define G_VARIANT_TYPE_INT64                ((GVariantType) "x")
+#define G_VARIANT_TYPE_INT64                ((const GVariantType *) "x")
 
 /**
  * G_VARIANT_TYPE_UINT64:
@@ -167,7 +167,7 @@ typedef enum
  * 18446744073709551616.  That's a really big number, but a Rubik's
  * cube can have a bit more than twice as many possible positions.
  **/
-#define G_VARIANT_TYPE_UINT64               ((GVariantType) "t")
+#define G_VARIANT_TYPE_UINT64               ((const GVariantType *) "t")
 
 /**
  * G_VARIANT_TYPE_DOUBLE:
@@ -177,14 +177,14 @@ typedef enum
  * between.  In any case, that's far greater than the estimated number
  * of fundamental particles in the observable universe.
  **/
-#define G_VARIANT_TYPE_DOUBLE               ((GVariantType) "d")
+#define G_VARIANT_TYPE_DOUBLE               ((const GVariantType *) "d")
 
 /**
  * G_VARIANT_TYPE_STRING:
  *
  * The type of a string.  "" is a string.  %NULL is not a string.
  **/
-#define G_VARIANT_TYPE_STRING               ((GVariantType) "s")
+#define G_VARIANT_TYPE_STRING               ((const GVariantType *) "s")
 
 /**
  * G_VARIANT_TYPE_OBJECT_PATH:
@@ -193,7 +193,7 @@ typedef enum
  * specific format used to identify objects at a given destination on
  * the bus.
  **/
-#define G_VARIANT_TYPE_OBJECT_PATH          ((GVariantType) "o")
+#define G_VARIANT_TYPE_OBJECT_PATH          ((const GVariantType *) "o")
 
 /**
  * G_VARIANT_TYPE_SIGNATURE:
@@ -201,12 +201,12 @@ typedef enum
  * The type of a DBus type signature.  These are strings of a specific
  * format used as type signatures for DBus methods and messages.
  *
- * Any valid #GVariantType signature string is a valid DBus type
+ * Any valid #const GVariantType * signature string is a valid DBus type
  * signature.  In addition, a concatenation of any number of valid
- * #GVariantType signature strings is also a valid DBus type
+ * #const GVariantType * signature strings is also a valid DBus type
  * signature.
  **/
-#define G_VARIANT_TYPE_SIGNATURE            ((GVariantType) "g")
+#define G_VARIANT_TYPE_SIGNATURE            ((const GVariantType *) "g")
 
 /**
  * G_VARIANT_TYPE_VARIANT:
@@ -214,63 +214,63 @@ typedef enum
  * The type of a box that contains any other value (including another
  * variant).
  **/
-#define G_VARIANT_TYPE_VARIANT              ((GVariantType) "v")
+#define G_VARIANT_TYPE_VARIANT              ((const GVariantType *) "v")
 
 /**
  * G_VARIANT_TYPE_UNIT:
  *
  * The empty structure type.  Has only one valid instance.
  **/
-#define G_VARIANT_TYPE_UNIT                 ((GVariantType) "()")
+#define G_VARIANT_TYPE_UNIT                 ((const GVariantType *) "()")
 
 /**
  * G_VARIANT_TYPE_ANY:
  *
  * The wildcard type.  Matches any type.
  **/
-#define G_VARIANT_TYPE_ANY                  ((GVariantType) "*")
+#define G_VARIANT_TYPE_ANY                  ((const GVariantType *) "*")
 
 /**
  * G_VARIANT_TYPE_ANY_BASIC:
  *
  * A wildcard type matching any basic type.
  **/
-#define G_VARIANT_TYPE_ANY_BASIC            ((GVariantType) "?")
+#define G_VARIANT_TYPE_ANY_BASIC            ((const GVariantType *) "?")
 
 /**
  * G_VARIANT_TYPE_ANY_MAYBE:
  *
  * A wildcard type matching any maybe type.
  **/
-#define G_VARIANT_TYPE_ANY_MAYBE            ((GVariantType) "m*")
+#define G_VARIANT_TYPE_ANY_MAYBE            ((const GVariantType *) "m*")
 
 /**
  * G_VARIANT_TYPE_ANY_ARRAY:
  *
  * A wildcard type matching any array type.
  **/
-#define G_VARIANT_TYPE_ANY_ARRAY            ((GVariantType) "a*")
+#define G_VARIANT_TYPE_ANY_ARRAY            ((const GVariantType *) "a*")
 
 /**
  * G_VARIANT_TYPE_ANY_STRUCT:
  *
  * A wildcard type matching any structure type.
  **/
-#define G_VARIANT_TYPE_ANY_STRUCT           ((GVariantType) "r")
+#define G_VARIANT_TYPE_ANY_STRUCT           ((const GVariantType *) "r")
 
 /**
  * G_VARIANT_TYPE_ANY_DICT_ENTRY:
  *
  * A wildcard type matching any dictionary entry type.
  **/
-#define G_VARIANT_TYPE_ANY_DICT_ENTRY       ((GVariantType) "e")
+#define G_VARIANT_TYPE_ANY_DICT_ENTRY       ((const GVariantType *) "e")
 
 /**
  * G_VARIANT_TYPE_ANY_DICTIONARY:
  *
  * A wildcard type matching any dictionary type.
  **/
-#define G_VARIANT_TYPE_ANY_DICTIONARY       ((GVariantType) "ae")
+#define G_VARIANT_TYPE_ANY_DICTIONARY       ((const GVariantType *) "ae")
 
 #pragma GCC visibility push (default)
 

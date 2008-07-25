@@ -17,7 +17,7 @@ typedef struct OPAQUE_TYPE__GVariantTypeInfo GVariantTypeInfo;
 
 typedef struct
 {
-  GVariantTypeInfo *info;
+  GVariantTypeInfo *type;
 
   gsize index, plus;
   gint8 and, or;
@@ -32,13 +32,13 @@ typedef struct
 const GVariantType             *g_variant_type_info_get_type            (GVariantTypeInfo   *typeinfo);
 GVariantTypeClass               g_variant_type_info_get_type_class      (GVariantTypeInfo   *typeinfo);
 
-void                            g_variant_type_info_info                (GVariantTypeInfo   *typeinfo,
+void                            g_variant_type_info_query               (GVariantTypeInfo   *typeinfo,
                                                                          guint              *alignment,
                                                                          gssize             *size);
 
 /* array */
 GVariantTypeInfo               *g_variant_type_info_element             (GVariantTypeInfo   *typeinfo);
-void                            g_variant_type_info_element_info        (GVariantTypeInfo   *typeinfo,
+void                            g_variant_type_info_query_element       (GVariantTypeInfo   *typeinfo,
                                                                          guint              *alignment,
                                                                          gssize             *size);
 

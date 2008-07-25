@@ -54,8 +54,8 @@ g_variant_type_info_get_type_class (GVariantTypeInfo *info)
 }
 
 void
-g_variant_type_info_info (GVariantTypeInfo *info,
-                          guint            *alignment,
+g_variant_type_info_query (GVariantTypeInfo *info,
+                           guint            *alignment,
                           gssize           *fixed_size)
 {
   g_assert_cmpint (info->ref_count, >, 0);
@@ -107,12 +107,12 @@ g_variant_type_info_element (GVariantTypeInfo *info)
 }
 
 void
-g_variant_type_info_element_info (GVariantTypeInfo *info,
-                                  guint            *alignment,
-                                  gssize           *fixed_size)
+g_variant_type_info_query_element (GVariantTypeInfo *info,
+                                   guint            *alignment,
+                                   gssize           *fixed_size)
 {
-  g_variant_type_info_info (ARRAY_INFO (info)->element,
-                            alignment, fixed_size);
+  g_variant_type_info_query (ARRAY_INFO (info)->element,
+                             alignment, fixed_size);
 }
 
 /* == structure == */
@@ -131,7 +131,7 @@ struct_info_free (GVariantTypeInfo *info)
   gint i;
 
   for (i = 0; i < struct_info->n_members; i++)
-    g_variant_type_info_unref (struct_info->members[i].info);
+    g_variant_type_info_unref (struct_info->members[i].type);
 
   g_slice_free1 (sizeof (GVariantMemberInfo) * struct_info->n_members,
                  struct_info->members);
@@ -177,9 +177,9 @@ struct_info_new (const GVariantType *type)
       gssize item_fixed_size;
       guint item_alignment;
 
-      info->members[i].info = g_variant_type_info_get (item);
-      item_fixed_size = info->members[i].info->fixed_size;
-      item_alignment = info->members[i].info->alignment;
+      info->members[i].type = g_variant_type_info_get (item);
+      item_fixed_size = info->members[i].type->fixed_size;
+      item_alignment = info->members[i].type->alignment;
 
       alignment |= item_alignment;
 

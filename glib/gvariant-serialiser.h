@@ -7,38 +7,40 @@
 #ifndef _gsvariant_h_
 #define _gsvariant_h_
 
-#include "gsvhelper.h"
+#include "gvarianttypeinfo.h"
 
 typedef struct
 {
-  GSVHelper *helper;
-  guchar *data;
-  gsize size;
-} GSVariant;
+  GVariantTypeInfo *type;
+  guchar           *data;
+  gsize             size;
+} GVariantSerialised;
 
-typedef void  (*GSVariantFiller)              (GSVariant       *svalue,
-                                               gpointer         data);
+/* deserialisation */
+gsize                           g_variant_serialised_n_children         (GVariantSerialised        container);
+GVariantSerialised              g_variant_serialised_get_child          (GVariantSerialised        container,
+                                                                         gsize                     index);
 
-void            g_svariant_assert_invariant   (GSVariant        value);
+/* serialisation */
+typedef void                  (*GVariantSerialisedFiller)               (GVariantSerialised       *serialised,
+                                                                         gpointer                  data);
 
-gboolean        g_svariant_is_normalised      (GSVariant        value);
-void            g_svariant_byteswap           (GSVariant        value);
+gsize                           g_variant_serialiser_needed_size        (GVariantTypeInfo         *info,
+                                                                         GVariantSerialisedFiller  gsv_filler,
+                                                                         const gpointer           *children,
+                                                                         gsize                     n_children);
 
-gsize           g_svariant_needed_size        (GSVHelper       *helper,
-                                               GSVariantFiller  gsv_filler,
-                                               gpointer        *children,
-                                               gsize            n_children);
+void                            g_variant_serialiser_serialise          (GVariantSerialised        container,
+                                                                         GVariantSerialisedFiller  gsv_filler,
+                                                                         const gpointer           *children,
+                                                                         gsize                     n_children);
 
-void            g_svariant_serialise          (GSVariant        container,
-                                               GSVariantFiller  gsv_filler,
-                                               gpointer        *children,
-                                               gsize            n_children);
+/* misc */
+void                            g_variant_serialised_assert_invariant   (GVariantSerialised        value);
+gboolean                        g_variant_serialised_is_normalised      (GVariantSerialised        value);
+void                            g_variant_serialised_byteswap           (GVariantSerialised        value);
 
-GSVariant       g_svariant_get_child          (GSVariant        container,
-                                               gsize            index);
-
-gsize           g_svariant_n_children         (GSVariant        container);
-
+#if 0
 static inline GSVariant
 g_svariant (GSVHelper *helper,
             guchar    *data,
@@ -50,5 +52,6 @@ g_svariant (GSVHelper *helper,
 
   return value;
 }
+#endif
 
 #endif /* _gsvariant_h_ */
