@@ -28,45 +28,36 @@ struct OPAQUE_TYPE__GVariantIter
 
 #pragma GCC visibility push (default)
 
+GVariant                       *g_variant_ref                           (GVariant             *value);
+GVariant                       *g_variant_ref_sink                      (GVariant             *value);
+void                            g_variant_unref                         (GVariant             *value);
+void                            g_variant_flatten                       (GVariant             *value);
+
+GVariantTypeClass               g_variant_get_type_class                (GVariant             *value);
 const GVariantType             *g_variant_get_type                      (GVariant             *value);
+const gchar                    *g_variant_get_type_string               (GVariant             *value);
+gboolean                        g_variant_is_fixed_size                 (GVariant             *value);
+gboolean                        g_variant_is_basic                      (GVariant             *value);
+gboolean                        g_variant_is_container                  (GVariant             *value);
 gboolean                        g_variant_matches                       (GVariant             *value,
                                                                          const GVariantType   *pattern);
-GVariant                       *g_variant_ref                           (GVariant             *value);
-GVariant                       *g_variant_unref                         (GVariant             *value);
-GVariant                       *g_variant_ref_sink                      (GVariant             *value);
 
-GVariant                       *g_variant_vvnew                         (const GVariantType   *type,
-                                                                         va_list              *app);
-
-GVariant                       *g_variant_vnew                          (const GVariantType   *type,
-                                                                         va_list               ap);
-
-GVariant                       *g_variant_new_full                      (const GVariantType   *type,
+GVariant                       *g_variant_new                           (const gchar          *format_string,
                                                                          ...);
-
-GVariant                       *g_variant_new                           (const gchar          *type_string,
-                                                                         ...);
-
-void                            g_variant_vvget                         (GVariant             *value,
-                                                                         gboolean              free,
-                                                                         const GVariantType   *type,
-                                                                         va_list              *app);
-
-void                            g_variant_vget                          (GVariant             *value,
-                                                                         gboolean              free,
-                                                                         const GVariantType   *type,
-                                                                         va_list               ap);
-
-void                            g_variant_get_full                      (GVariant             *value,
-                                                                         gboolean              free,
-                                                                         const GVariantType   *type,
-                                                                         ...);
-
 void                            g_variant_get                           (GVariant             *value,
-                                                                         const gchar          *type_string,
+                                                                         const gchar          *format_string,
                                                                          ...);
 
-void                            g_variant_flatten                       (GVariant             *value);
+GVariant                       *g_variant_vvnew                         (const gchar          *format_string,
+                                                                         va_list              *app);
+GVariant                       *g_variant_vnew                          (const gchar          *format_string,
+                                                                         va_list               ap);
+void                            g_variant_vvget                         (GVariant             *value,
+                                                                         const gchar          *format_string,
+                                                                         va_list              *app);
+void                            g_variant_vget                          (GVariant             *value,
+                                                                         const gchar          *format_string,
+                                                                         va_list               ap);
 
 /* constructors */
 GVariant                       *g_variant_new_boolean                   (gboolean              boolean);
@@ -142,9 +133,9 @@ GString                        *g_variant_markup_print                  (GVarian
                                                                          gint                  tabstop);
 void                            g_variant_markup_parser_start_parse     (GMarkupParseContext  *context,
                                                                          const GVariantType   *type);
-GVariant                        *g_variant_markup_parser_end_parse      (GMarkupParseContext  *context,
+GVariant                       *g_variant_markup_parser_end_parse       (GMarkupParseContext  *context,
                                                                          GError              **error);
-GVariant                        *g_variant_markup_parse                 (const gchar          *string,
+GVariant                       *g_variant_markup_parse                  (const gchar          *string,
                                                                          const GVariantType   *type,
                                                                          GError              **error);
 

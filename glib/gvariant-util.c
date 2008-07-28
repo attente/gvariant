@@ -41,7 +41,8 @@ g_variant_iter_cancel (GVariantIter *iter)
 {
   GVariantIterReal *real = (GVariantIterReal *) iter;
 
-  real->value = g_variant_unref (real->value);
+  g_variant_unref (real->value);
+  real->value = NULL;
 }
 
 /**
@@ -101,7 +102,10 @@ g_variant_iter_next (GVariantIter *iter)
   value = g_variant_get_child (real->value, real->offset++);
 
   if (real->offset == real->length)
-    real->value = g_variant_unref (real->value);
+    {
+      g_variant_unref (real->value);
+      real->value = NULL;
+    }
 
   return value;
 }
@@ -152,7 +156,7 @@ g_variant_iter_next (GVariantIter *iter)
  **/
 gboolean
 g_variant_iterate (GVariantIter *iter,
-                   const gchar  *type_string,
+                   const gchar  *format_string,
                    ...)
 {
   GVariant *value;
@@ -163,8 +167,8 @@ g_variant_iterate (GVariantIter *iter,
   if (value == NULL)
     return FALSE;
 
-  va_start (ap, type_string);
-  g_variant_vget (value, TRUE, G_VARIANT_TYPE (type_string), ap);
+  va_start (ap, format_string);
+  g_variant_vget (value, format_string, ap);
   va_end (ap);
 
   g_variant_unref (value);
@@ -550,14 +554,14 @@ g_variant_builder_add_value (GVariantBuilder *builder,
 
 void
 g_variant_builder_add (GVariantBuilder *builder,
-                       const gchar     *type_string,
+                       const gchar     *format_string,
                        ...)
 {
   GVariant *variant;
   va_list ap;
 
-  va_start (ap, type_string);
-  variant = g_variant_vnew (G_VARIANT_TYPE (type_string), ap);
+  va_start (ap, format_string);
+  variant = g_variant_vnew (format_string, ap);
   va_end (ap);
 
   g_variant_builder_add_value (builder, variant);

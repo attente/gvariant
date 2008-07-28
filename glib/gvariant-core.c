@@ -184,7 +184,7 @@ g_variant_apply_flags (GVariant      *value,
  * Decreases the reference count of @variant.  When its reference
  * count drops to 0, the memory used by the variant is freed.
  **/
-GVariant *
+void
 g_variant_unref (GVariant *value)
 {
   check (value);
@@ -238,8 +238,6 @@ g_variant_unref (GVariant *value)
       /* free the structure itself */
       g_slice_free (GVariant, value);
     }
-
-  return NULL;
 }
 
 /**

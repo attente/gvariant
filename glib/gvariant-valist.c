@@ -14,14 +14,51 @@
 #include "gvariant-private.h"
 
 static void
-g_variant_valist_get (GVariant   *value,
-                      gboolean    free,
-                      GSignature  signature,
-                      va_list    *app)
+g_variant_valist_free (GVariant     *value,
+                       gboolean      free,
+                       const gchar **format_string,
+                       va_list      *app)
 {
-  switch (g_signature_type (signature))
+  switch (*(*format_string++))
   {
-    case G_SIGNATURE_TYPE_BOOLEAN:
+    case '*':
+    case 'v':
+      g_variant_unref (va_arg (*app, (GVariant *)));
+      break;
+
+    case 'b':
+    case 'y':
+    case 'n':
+    case 'q':
+    case 'i':
+    case 'u':
+    case 'x':
+    case 't':
+    case 's':
+    case 'o':
+    case 'g':
+      va_arg (*app, (void *));
+      break;
+
+    case 'a':
+    case '(':
+    case '{':
+    case '&':
+    case 'm':
+  }
+
+
+}
+
+static void
+g_variant_valist_get (GVariant           *value,
+                      gboolean            free,
+                      const GVariantType *type,
+                      va_list            *app)
+{
+  switch (g_variant_type_get_natural_class (type))
+  {
+    case G_VARIANT_TYPE_CLASS_BOOLEAN:
       {
         gboolean *ptr;
 
@@ -38,29 +75,29 @@ g_variant_valist_get (GVariant   *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_BYTE:
+    case G_VARIANT_TYPE_CLASS_BYTE:
       g_variant_get_small (value, va_arg (*app, guint8 *), 1);
       break;
 
-    case G_SIGNATURE_TYPE_INT16:
-    case G_SIGNATURE_TYPE_UINT16:
+    case G_VARIANT_TYPE_CLASS_INT16:
+    case G_VARIANT_TYPE_CLASS_UINT16:
       g_variant_get_small (value, va_arg (*app, guint16 *), 2);
       break;
 
-    case G_SIGNATURE_TYPE_INT32:
-    case G_SIGNATURE_TYPE_UINT32:
+    case G_VARIANT_TYPE_CLASS_INT32:
+    case G_VARIANT_TYPE_CLASS_UINT32:
       g_variant_get_small (value, va_arg (*app, guint32 *), 4);
       break;
 
-    case G_SIGNATURE_TYPE_INT64:
-    case G_SIGNATURE_TYPE_UINT64:
-    case G_SIGNATURE_TYPE_DOUBLE:
+    case G_VARIANT_TYPE_CLASS_INT64:
+    case G_VARIANT_TYPE_CLASS_UINT64:
+    case G_VARIANT_TYPE_CLASS_DOUBLE:
       g_variant_get_small (value, va_arg (*app, guint32 *), 8);
       break;
 
-    case G_SIGNATURE_TYPE_STRING:
-    case G_SIGNATURE_TYPE_OBJECT_PATH:
-    case G_SIGNATURE_TYPE_SIGNATURE:
+    case G_VARIANT_TYPE_CLASS_STRING:
+    case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
+    case G_VARIANT_TYPE_CLASS_SIGNATURE:
       {
         char **ptr;
 
@@ -73,7 +110,7 @@ g_variant_valist_get (GVariant   *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_ANY:
+    case G_VARIANT_TYPE_CLASS_ALL:
       {
         GVariant **ptr;
 
@@ -85,7 +122,7 @@ g_variant_valist_get (GVariant   *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_VARIANT:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
       {
         GVariant **ptr;
 
@@ -96,7 +133,7 @@ g_variant_valist_get (GVariant   *value,
 
         break;
       }
-    case G_SIGNATURE_TYPE_ARRAY:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
       {
         GVariantIter *iter;
 
@@ -108,7 +145,7 @@ g_variant_valist_get (GVariant   *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_STRUCT:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
       {
         GSignature itemsig;
         int i;
@@ -129,7 +166,7 @@ g_variant_valist_get (GVariant   *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       {
         GSignature keysig, valsig;
         GVariant *key, *val;
@@ -158,61 +195,61 @@ g_variant_valist_new (GSignature  signature,
 {
   switch (g_signature_type (signature))
   {
-    case G_SIGNATURE_TYPE_BOOLEAN:
+    case G_VARIANT_TYPE_CLASS_BOOLEAN:
       {
         guint8 byte = !!va_arg (*app, gboolean);
         return g_variant_new_small (signature, &byte, 1);
       }
 
-    case G_SIGNATURE_TYPE_BYTE:
+    case G_VARIANT_TYPE_CLASS_BYTE:
       {
         guint8 byte = va_arg (*app, guint);
         return g_variant_new_small (signature, &byte, 1);
       }
 
-    case G_SIGNATURE_TYPE_INT16:
-    case G_SIGNATURE_TYPE_UINT16:
+    case G_VARIANT_TYPE_CLASS_INT16:
+    case G_VARIANT_TYPE_CLASS_UINT16:
       {
         guint16 integer_16 = va_arg (*app, guint);
         return g_variant_new_small (signature, &integer_16, 2);
       }
 
-    case G_SIGNATURE_TYPE_INT32:
-    case G_SIGNATURE_TYPE_UINT32:
+    case G_VARIANT_TYPE_CLASS_INT32:
+    case G_VARIANT_TYPE_CLASS_UINT32:
       {
         guint32 integer_32 = va_arg (*app, guint);
         return g_variant_new_small (signature, &integer_32, 4);
       }
 
-    case G_SIGNATURE_TYPE_INT64:
-    case G_SIGNATURE_TYPE_UINT64:
+    case G_VARIANT_TYPE_CLASS_INT64:
+    case G_VARIANT_TYPE_CLASS_UINT64:
       {
         guint64 integer_64 = va_arg (*app, guint64);
         return g_variant_new_small (signature, &integer_64, 8);
       }
 
-    case G_SIGNATURE_TYPE_DOUBLE:
+    case G_VARIANT_TYPE_CLASS_DOUBLE:
       {
         double floating = va_arg (*app, double);
         return g_variant_new_small (signature, &floating, 8);
       }
 
-    case G_SIGNATURE_TYPE_STRING:
+    case G_VARIANT_TYPE_CLASS_STRING:
       return g_variant_new_string (va_arg (*app, const char *));
 
-    case G_SIGNATURE_TYPE_OBJECT_PATH:
+    case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
       return g_variant_new_object_path (va_arg (*app, const char *));
 
-    case G_SIGNATURE_TYPE_SIGNATURE:
+    case G_VARIANT_TYPE_CLASS_SIGNATURE:
       return g_variant_new_signature (va_arg (*app, const char *));
 
-    case G_SIGNATURE_TYPE_ANY:
+    case G_VARIANT_TYPE_CLASS_ANY:
       return va_arg (*app, GVariant *);
 
-    case G_SIGNATURE_TYPE_VARIANT:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
       return g_variant_new_variant (va_arg (*app, GVariant *));
 
-    case G_SIGNATURE_TYPE_ARRAY:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
       {
         GSVHelper *helper;
         GSignature elemsig;
@@ -261,7 +298,7 @@ g_variant_valist_new (GSignature  signature,
         return g_variant_new_tree (helper, children, n_children, trusted);
       }
 
-    case G_SIGNATURE_TYPE_STRUCT:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
       {
         GSVHelper *helper;
         GSignature itemsig;
@@ -303,7 +340,7 @@ g_variant_valist_new (GSignature  signature,
         return g_variant_new_tree (helper, children, n_children, trusted);
       }
 
-    case G_SIGNATURE_TYPE_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       {
         GSVHelper *helper;
         GVariant **children;
