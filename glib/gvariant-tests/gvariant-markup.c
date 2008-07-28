@@ -91,7 +91,7 @@ check_verbatim (gconstpointer data)
   if (value == NULL)
     {
       g_assert (error != NULL);
-      g_error (error->message);
+      g_error ("%s", error->message);
     }
   else
     g_assert (error == NULL);
