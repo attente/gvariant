@@ -42,22 +42,19 @@ gboolean                        g_variant_is_container                  (GVarian
 gboolean                        g_variant_matches                       (GVariant             *value,
                                                                          const GVariantType   *pattern);
 
+/* varargs construct/deconstruct */
 GVariant                       *g_variant_new                           (const gchar          *format_string,
                                                                          ...);
 void                            g_variant_get                           (GVariant             *value,
                                                                          const gchar          *format_string,
                                                                          ...);
 
-GVariant                       *g_variant_vvnew                         (const gchar          *format_string,
+gboolean                        g_variant_format_string_scan            (const gchar         **format_string);
+GVariant                       *g_variant_new_va                        (const gchar         **format_string,
                                                                          va_list              *app);
-GVariant                       *g_variant_vnew                          (const gchar          *format_string,
-                                                                         va_list               ap);
-void                            g_variant_vvget                         (GVariant             *value,
-                                                                         const gchar          *format_string,
+void                            g_variant_get_va                        (GVariant             *value,
+                                                                         const gchar         **format_string,
                                                                          va_list              *app);
-void                            g_variant_vget                          (GVariant             *value,
-                                                                         const gchar          *format_string,
-                                                                         va_list               ap);
 
 /* constructors */
 GVariant                       *g_variant_new_boolean                   (gboolean              boolean);
@@ -119,10 +116,12 @@ gboolean                        g_variant_builder_check_add             (GVarian
                                                                          const GVariantType   *type,
                                                                          GError              **error);
 gboolean                        g_variant_builder_check_end             (GVariantBuilder      *builder,
+                                                                         const GVariantType   *type,
                                                                          GError              **error);
 GVariantBuilder                *g_variant_builder_new                   (GVariantTypeClass     class,
                                                                          const GVariantType   *type);
-GVariant                       *g_variant_builder_end                   (GVariantBuilder      *builder);
+GVariant                       *g_variant_builder_end                   (GVariantBuilder      *builder,
+                                                                         const GVariantType   *type);
 void                            g_variant_builder_cancel                (GVariantBuilder      *builder);
 
 /* markup printing/parsing */
