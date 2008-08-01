@@ -8,13 +8,11 @@
  * See the included COPYING file for more information.
  */
 
-#include <stdarg.h>
-#include <glib.h>
-
 #include "gvariant-private.h"
 
-
-
+#include <glib/gtestutils.h>
+#include <glib/gmessages.h>
+#include <string.h>
 
 /**
  * g_variant_new:
@@ -153,52 +151,288 @@
  * be extended in the future.
  **/
 
-
-
-
-
-static void
-g_variant_valist_free (GVariant     *value,
-                       gboolean      free,
-                       const gchar **format_string,
-                       va_list      *app)
+gboolean
+g_variant_format_string_scan (const gchar **format_string)
 {
-  switch (*(*format_string++))
+  switch (*(*format_string)++)
   {
-    case '*':
-    case 'v':
-      g_variant_unref (va_arg (*app, (GVariant *)));
-      break;
+    case '\0':
+      return FALSE;
 
-    case 'b':
-    case 'y':
-    case 'n':
-    case 'q':
-    case 'i':
-    case 'u':
-    case 'x':
-    case 't':
-    case 's':
-    case 'o':
-    case 'g':
-      va_arg (*app, (void *));
-      break;
+    case '(':
+      while (**format_string != ')')
+        if (!g_variant_format_string_scan (format_string))
+          return FALSE;
+
+      (*format_string)++; /* ')' */
+
+      return TRUE;
+
+    case '{':
+      if (**format_string == '\0')
+        return FALSE;
+
+      if (!strchr ("bynqiuxtdsog", *(*format_string)++))         /* key */
+        return FALSE;
+
+      if (!g_variant_format_string_scan (format_string))    /* value */
+        return FALSE;
+
+      if (*(*format_string)++ != '}')
+        return FALSE;
+
+      return TRUE;
+
+    case 'm':
+      return g_variant_format_string_scan (format_string);
 
     case 'a':
-    case '(':
-    case '{':
+    case '@':
+      return g_variant_type_string_scan (format_string, NULL);
+
     case '&':
-    case 'm':
+      {
+        const GVariantType *type;
+
+        type = (const GVariantType *) *format_string;
+        if (!g_variant_type_string_scan (format_string, NULL))
+          return FALSE;
+
+        if (!g_variant_type_is_fixed_size (type))
+          return FALSE;
+      }
+
+    case 'b': case 'y': case 'n': case 'q': case 'i': case 'u':
+    case 'x': case 't': case 'd': case 's': case 'o': case 'g':
+    case 'v': case '*':
+      return TRUE;
+
+    default:
+      return FALSE;
   }
+}
 
+static gboolean
+g_variant_format_string_is_valid (const gchar *format_string)
+{
+  return g_variant_format_string_scan (&format_string) &&
+         *format_string == '\0';
+}
 
+static GVariantType *
+g_variant_format_string_get_type (const gchar **format_string)
+{
+  const gchar *src;
+  gchar *dest;
+  gchar *new;
+
+  src = *format_string;
+  if G_UNLIKELY (!g_variant_format_string_scan (format_string))
+    g_error ("format string is invalid");
+
+  dest = new = g_malloc (*format_string - src + 1);
+  while (src != *format_string)
+    {
+      if (*src != '@' && *src != '&')
+        *dest++ = *src;
+      src++;
+    }
+  *dest = '\0';
+
+  return (GVariantType *) G_VARIANT_TYPE (new);
+}
+
+static GVariant *
+g_variant_valist_new (const gchar **format_string,
+                      va_list      *app)
+{
+  switch (**format_string)
+  {
+    case 'b':
+      (*format_string)++;
+      return g_variant_new_boolean (va_arg (*app, gboolean));
+
+    case 'y':
+      (*format_string)++;
+      return g_variant_new_byte (va_arg (*app, guint));
+
+    case 'n':
+      (*format_string)++;
+      return g_variant_new_int16 (va_arg (*app, gint));
+
+    case 'q':
+      (*format_string)++;
+      return g_variant_new_uint16 (va_arg (*app, guint));
+
+    case 'i':
+      (*format_string)++;
+      return g_variant_new_int32 (va_arg (*app, gint));
+
+    case 'u':
+      (*format_string)++;
+      return g_variant_new_uint32 (va_arg (*app, guint));
+
+    case 'x':
+      (*format_string)++;
+      return g_variant_new_int64 (va_arg (*app, gint64));
+
+    case 't':
+      (*format_string)++;
+      return g_variant_new_uint64 (va_arg (*app, guint64));
+
+    case 'd':
+      (*format_string)++;
+      return g_variant_new_double (va_arg (*app, gdouble));
+
+    case 's':
+      (*format_string)++;
+      return g_variant_new_string (va_arg (*app, const gchar *));
+
+    case 'o':
+      (*format_string)++;
+      return g_variant_new_object_path (va_arg (*app, const gchar *));
+
+    case 'g':
+      (*format_string)++;
+      return g_variant_new_signature (va_arg (*app, const gchar *));
+
+    case 'v':
+      (*format_string)++;
+      return g_variant_new_variant (va_arg (*app, GVariant *));
+
+    case '*':
+      (*format_string)++;
+      return va_arg (*app, GVariant *);
+
+    case 'a':
+      {
+        GVariantBuilder *builder;
+        const GVariantType *type;
+        GVariant *value;
+
+        type = (const GVariantType *) *format_string;
+        if G_UNLIKELY (!g_variant_type_string_scan (format_string, NULL))
+          g_error ("array type in format string is not valid");
+
+        builder = va_arg (*app, GVariantBuilder *);
+        value = g_variant_builder_end (builder, type);
+
+        return value;
+      }
+
+    case 'm':
+      {
+        GVariantBuilder *builder;
+        const gchar *string;
+        GVariantType *type;
+        GVariant *value;
+
+        type = g_variant_format_string_get_type (format_string);
+        builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_MAYBE, type);
+        g_variant_type_free (type);
+
+        switch (*((*format_string) + 1))
+        {
+          case 's':
+            if ((string = va_arg (*app, const gchar *)))
+              g_variant_builder_add_value (builder,
+                                           g_variant_new_string (string));
+            *format_string += 2;
+            break;
+
+          case 'o':
+            if ((string = va_arg (*app, const gchar *)))
+              g_variant_builder_add_value (builder,
+                                           g_variant_new_object_path (string));
+            *format_string += 2;
+            break;
+
+          case 'g':
+            if ((string = va_arg (*app, const gchar *)))
+              g_variant_builder_add_value (builder,
+                                           g_variant_new_signature (string));
+            *format_string += 2;
+            break;
+
+          case '*':
+          case '@':
+            if ((value = va_arg (*app, GVariant *)))
+              g_variant_builder_add_value (builder, value);
+            break;
+
+          case 'v':
+            if ((value = va_arg (*app, GVariant *)))
+              g_variant_builder_add_value (builder, g_variant_new_variant (value));
+            break;
+            
+          default:
+            {
+              gboolean just;
+
+              just = va_arg (*app, gboolean);
+
+              if (just)
+                {
+                  value = g_variant_valist_new (format_string, app);
+                  g_variant_builder_add_value (builder, value);
+                }
+            }
+        }
+
+        return g_variant_builder_end (builder, NULL);
+      }
+
+    case '(':
+      {
+      }
+  }
+  g_error ("wtf");
+}
+
+GVariant *
+g_variant_new (const gchar *format_string,
+               ...)
+{
+  GVariant *value;
+  va_list ap;
+
+  va_start (ap, format_string);
+  value = g_variant_new_va (&format_string, &ap);
+  g_assert (*format_string == '\0');
+  va_end (ap);
+
+  return value;
+}
+
+GVariant *
+g_variant_new_va (const gchar **format_string,
+                  va_list      *app)
+{
+  GVariant *value;
+
+  value = g_variant_valist_new (format_string, app);
+  g_variant_flatten (value);
+
+  return value;
+}
+
+void
+g_variant_get_va (GVariant     *value,
+                  const gchar **format_string,
+                  va_list      *app)
+{
+  GVariantType *type;
+  const gchar *fmt;
+
+  fmt = *format_string;
+  type = g_variant_format_string_get_type (format_string);
+  g_assert (g_variant_matches (value, type));
 }
 
 static void
-g_variant_valist_get (GVariant           *value,
-                      gboolean            free,
-                      const GVariantType *type,
-                      va_list            *app)
+g_variant_valist_get (GVariant     *value,
+                      const gchar **format_string,
+                      va_list      *app)
 {
   switch (g_variant_type_get_natural_class (type))
   {
@@ -813,3 +1047,87 @@ g_variant_new (const char *signature_string,
 
   return g_variant_ensure_floating (value);
 }
+
+/**
+ * g_variant_iterate:
+ * @iter: a #GVariantIter
+ * @signature_string: a #GSignature string
+ * @returns: %TRUE if a child was fetched or
+ *   %FALSE if no children remain.
+ *
+ * Retreives the next child value from @iter and
+ * deconstructs it according to @signature_string.
+ *
+ * This call is essentially equivalent to
+ * g_variant_iter_next() and g_variant_get().  On
+ * all but the first access to the iterator the
+ * given pointers are freed, if appropriate.
+ *
+ * It might be used as follows:
+ *
+ * <programlisting>
+ * {
+ *   GVariantIter iter;
+ *   char *key, *value;
+ *   ...
+ *
+ *   while (g_variant_iterate (iter, "{ss}", &key, &value))
+ *     printf ("dict{%s} = %s\n", key, value);
+ * }
+ * </programlisting>
+ *
+ * Note that on each time through the loop 'key'
+ * and 'value' are newly allocated strings.  They
+ * do not need to be freed, however, since the
+ * next call to g_variant_iterate will free them.
+ *
+ * Before the first iteration of the loop, the
+ * pointers are not expected to be initialised to
+ * any particular value.  After the last iteration
+ * the pointers will be set to %NULL.
+ *
+ * If you wish to 'steal' the newly allocated
+ * strings for yourself then you must set the
+ * pointers to %NULL before the next call to
+ * g_variant_iterate() to prevent them from being
+ * freed.
+ **/
+gboolean
+g_variant_iterate (GVariantIter *iter,
+                   const gchar  *format_string,
+                   ...)
+{
+  GVariant *value;
+  va_list ap;
+
+  value = g_variant_iter_next (iter);
+
+  if (value == NULL)
+    return FALSE;
+
+  va_start (ap, format_string);
+  g_variant_vget (value, format_string, ap);
+  va_end (ap);
+
+  g_variant_unref (value);
+
+  return TRUE;
+}
+
+
+void
+g_variant_builder_add (GVariantBuilder *builder,
+                       const gchar     *format_string,
+                       ...)
+{
+  GVariant *variant;
+  va_list ap;
+
+  va_start (ap, format_string);
+  variant = g_variant_vnew (format_string, ap);
+  va_end (ap);
+
+  g_variant_builder_add_value (builder, variant);
+}
+
+

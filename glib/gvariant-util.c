@@ -111,72 +111,6 @@ g_variant_iter_next (GVariantIter *iter)
 }
 
 /**
- * g_variant_iterate:
- * @iter: a #GVariantIter
- * @signature_string: a #GSignature string
- * @returns: %TRUE if a child was fetched or
- *   %FALSE if no children remain.
- *
- * Retreives the next child value from @iter and
- * deconstructs it according to @signature_string.
- *
- * This call is essentially equivalent to
- * g_variant_iter_next() and g_variant_get().  On
- * all but the first access to the iterator the
- * given pointers are freed, if appropriate.
- *
- * It might be used as follows:
- *
- * <programlisting>
- * {
- *   GVariantIter iter;
- *   char *key, *value;
- *   ...
- *
- *   while (g_variant_iterate (iter, "{ss}", &key, &value))
- *     printf ("dict{%s} = %s\n", key, value);
- * }
- * </programlisting>
- *
- * Note that on each time through the loop 'key'
- * and 'value' are newly allocated strings.  They
- * do not need to be freed, however, since the
- * next call to g_variant_iterate will free them.
- *
- * Before the first iteration of the loop, the
- * pointers are not expected to be initialised to
- * any particular value.  After the last iteration
- * the pointers will be set to %NULL.
- *
- * If you wish to 'steal' the newly allocated
- * strings for yourself then you must set the
- * pointers to %NULL before the next call to
- * g_variant_iterate() to prevent them from being
- * freed.
- **/
-gboolean
-g_variant_iterate (GVariantIter *iter,
-                   const gchar  *format_string,
-                   ...)
-{
-  GVariant *value;
-  va_list ap;
-
-  value = g_variant_iter_next (iter);
-
-  if (value == NULL)
-    return FALSE;
-
-  va_start (ap, format_string);
-  g_variant_vget (value, format_string, ap);
-  va_end (ap);
-
-  g_variant_unref (value);
-
-  return TRUE;
-}
-
-/**
  * g_variant_matches:
  * @value: a #GVariant instance
  * @pattern: a possibly abstract #GSignature
@@ -552,21 +486,6 @@ g_variant_builder_add_value (GVariantBuilder *builder,
   builder->children[builder->offset++] = g_variant_ref_sink (value);
 }
 
-void
-g_variant_builder_add (GVariantBuilder *builder,
-                       const gchar     *format_string,
-                       ...)
-{
-  GVariant *variant;
-  va_list ap;
-
-  va_start (ap, format_string);
-  variant = g_variant_vnew (format_string, ap);
-  va_end (ap);
-
-  g_variant_builder_add_value (builder, variant);
-}
-
 GVariantBuilder *
 g_variant_builder_open (GVariantBuilder    *parent,
                         GVariantTypeClass   class,
@@ -595,6 +514,7 @@ GVariantBuilder *
 g_variant_builder_close (GVariantBuilder *child)
 {
   GVariantBuilder *parent;
+  GVariant *value;
 
   g_assert (child != NULL);
   g_assert (child->parent != NULL);
@@ -604,7 +524,8 @@ g_variant_builder_close (GVariantBuilder *child)
   parent = child->parent;
   child->parent = NULL;
 
-  g_variant_builder_add_value (parent, g_variant_builder_end (child));
+  value = g_variant_builder_end (child, parent->expected);
+  g_variant_builder_add_value (parent, value);
 
   return parent;
 }
@@ -670,13 +591,14 @@ g_variant_builder_new (GVariantTypeClass   class,
 }
 
 GVariant *
-g_variant_builder_end (GVariantBuilder *builder)
+g_variant_builder_end (GVariantBuilder    *builder,
+                       const GVariantType *type)
 {
   GVariantType *my_type;
   GError *error = NULL;
   GVariant *value;
 
-  if G_UNLIKELY (!g_variant_builder_check_end (builder, &error))
+  if G_UNLIKELY (!g_variant_builder_check_end (builder, type, &error))
     g_error ("g_variant_builder_end: %s", error->message);
 
   g_variant_builder_resize (builder, builder->offset);
@@ -729,8 +651,9 @@ g_variant_builder_end (GVariantBuilder *builder)
 }
 
 gboolean
-g_variant_builder_check_end (GVariantBuilder  *builder,
-                             GError          **error)
+g_variant_builder_check_end (GVariantBuilder     *builder,
+                             const GVariantType  *type,
+                             GError             **error)
 {
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
