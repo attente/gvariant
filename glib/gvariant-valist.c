@@ -172,7 +172,8 @@ g_variant_format_string_scan (const gchar **format_string)
       if (**format_string == '\0')
         return FALSE;
 
-      if (!strchr ("bynqiuxtdsog", *(*format_string)++))         /* key */
+      /* XXX key could be a @ or & */
+      if (!strchr ("bynqiuxtdsog", *(*format_string)++))     /* key */
         return FALSE;
 
       if (!g_variant_format_string_scan (format_string))    /* value */
@@ -212,12 +213,14 @@ g_variant_format_string_scan (const gchar **format_string)
   }
 }
 
+#if 0
 static gboolean
 g_variant_format_string_is_valid (const gchar *format_string)
 {
   return g_variant_format_string_scan (&format_string) &&
          *format_string == '\0';
 }
+#endif
 
 static GVariantType *
 g_variant_format_string_get_type (const gchar **format_string)
@@ -305,20 +308,7 @@ g_variant_valist_new (const gchar **format_string,
       return va_arg (*app, GVariant *);
 
     case 'a':
-      {
-        GVariantBuilder *builder;
-        const GVariantType *type;
-        GVariant *value;
-
-        type = (const GVariantType *) *format_string;
-        if G_UNLIKELY (!g_variant_type_string_scan (format_string, NULL))
-          g_error ("array type in format string is not valid");
-
-        builder = va_arg (*app, GVariantBuilder *);
-        value = g_variant_builder_end (builder, type);
-
-        return value;
-      }
+      return g_variant_builder_end (va_arg (*app, GVariantBuilder *));
 
     case 'm':
       {
@@ -327,7 +317,8 @@ g_variant_valist_new (const gchar **format_string,
         GVariantType *type;
         GVariant *value;
 
-        type = g_variant_format_string_get_type (format_string);
+        string = *format_string;
+        type = g_variant_format_string_get_type (&string);
         builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_MAYBE, type);
         g_variant_type_free (type);
 
@@ -379,14 +370,35 @@ g_variant_valist_new (const gchar **format_string,
             }
         }
 
-        return g_variant_builder_end (builder, NULL);
+        return g_variant_builder_end (builder);
       }
 
-    case '(':
       {
+        GVariantBuilder *builder;
+
+        if (TRUE) case '(':
+          builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_STRUCT,
+                                           NULL);
+        else case '{':
+          builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_DICT_ENTRY,
+                                           NULL);
+
+        (*format_string)++;                                          /* '(' */
+        while (**format_string != ')' && **format_string != '}')
+          {
+            GVariant *value;
+
+            value = g_variant_valist_new (format_string, app);
+            g_variant_builder_add_value (builder, value);
+          }
+        (*format_string)++;                                          /* ')' */
+
+        return g_variant_builder_end (builder);
       }
+
+    default:
+      g_assert_not_reached ();
   }
-  g_error ("wtf");
 }
 
 GVariant *
@@ -415,7 +427,7 @@ g_variant_new_va (const gchar **format_string,
 
   return value;
 }
-
+#if 0
 void
 g_variant_get_va (GVariant     *value,
                   const gchar **format_string,
@@ -427,6 +439,8 @@ g_variant_get_va (GVariant     *value,
   fmt = *format_string;
   type = g_variant_format_string_get_type (format_string);
   g_assert (g_variant_matches (value, type));
+
+  g_variant_valist_get (
 }
 
 static void
@@ -1047,6 +1061,8 @@ g_variant_new (const char *signature_string,
 
   return g_variant_ensure_floating (value);
 }
+#endif
+
 
 /**
  * g_variant_iterate:
@@ -1106,7 +1122,7 @@ g_variant_iterate (GVariantIter *iter,
     return FALSE;
 
   va_start (ap, format_string);
-  g_variant_vget (value, format_string, ap);
+  //g_variant_vget (value, format_string, ap);
   va_end (ap);
 
   g_variant_unref (value);
@@ -1124,10 +1140,10 @@ g_variant_builder_add (GVariantBuilder *builder,
   va_list ap;
 
   va_start (ap, format_string);
-  variant = g_variant_vnew (format_string, ap);
+  variant = g_variant_new_va (&format_string, &ap);
+  g_assert (*format_string == '\0');
   va_end (ap);
 
   g_variant_builder_add_value (builder, variant);
 }
-
 

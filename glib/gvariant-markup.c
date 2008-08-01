@@ -29,9 +29,9 @@ g_variant_markup_print (GVariant *value,
                         gint      indentation,
                         gint      tabstop)
 {
-  GSignature signature;
+  const GVariantType *type;
 
-  signature = g_variant_get_signature (value);
+  type = g_variant_get_type (value);
 
   if (G_UNLIKELY (string == NULL))
     string = g_string_new (NULL);
@@ -39,9 +39,9 @@ g_variant_markup_print (GVariant *value,
   indentation += tabstop;
   g_variant_markup_indent (string, indentation);
 
-  switch (g_signature_type (signature))
+  switch (g_variant_get_type_class (value))
   {
-    case G_SIGNATURE_TYPE_VARIANT:
+    case G_VARIANT_TYPE_CLASS_VARIANT:
       {
         GVariant *child;
 
@@ -59,18 +59,9 @@ g_variant_markup_print (GVariant *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_MAYBE:
+    case G_VARIANT_TYPE_CLASS_MAYBE:
       {
-        if (g_variant_n_children (value) == 0)
-          {
-            char *signature_string;
-
-            signature_string = g_signature_get (signature);
-            g_string_append_printf (string, "<nothing signature='%s'/>",
-                                    signature_string);
-            g_free (signature_string);
-          }
-        else
+        if (g_variant_n_children (value))
           {
             GVariant *element;
 
@@ -85,11 +76,14 @@ g_variant_markup_print (GVariant *value,
             g_variant_markup_indent (string, indentation);
             g_string_append (string, "</maybe>");
           }
+        else
+          g_string_append_printf (string, "<nothing signature='%s'/>",
+                                  g_variant_get_type_string (value));
 
         break;
       }
 
-    case G_SIGNATURE_TYPE_ARRAY:
+    case G_VARIANT_TYPE_CLASS_ARRAY:
       {
         GVariantIter iter;
 
@@ -111,20 +105,13 @@ g_variant_markup_print (GVariant *value,
             g_string_append (string, "</array>");
           }
         else
-          {
-            char *signature_string;
-
-            signature_string = g_signature_get (signature);
-            g_string_append_printf (string,
-                                    "<array signature='%s'/>",
-                                    signature_string);
-            g_free (signature_string);
-          }
+          g_string_append_printf (string, "<array signature='%s'/>",
+                                  g_variant_get_type_string (value));
 
         break;
       }
 
-    case G_SIGNATURE_TYPE_STRUCT:
+    case G_VARIANT_TYPE_CLASS_STRUCT:
       {
         GVariantIter iter;
 
@@ -151,7 +138,7 @@ g_variant_markup_print (GVariant *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_DICT_ENTRY:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       {
         GVariantIter iter;
         GVariant *element;
@@ -173,7 +160,7 @@ g_variant_markup_print (GVariant *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_STRING:
+    case G_VARIANT_TYPE_CLASS_STRING:
       {
         char *escaped;
 
@@ -185,55 +172,56 @@ g_variant_markup_print (GVariant *value,
         break;
       }
 
-    case G_SIGNATURE_TYPE_BOOLEAN:
+    case G_VARIANT_TYPE_CLASS_BOOLEAN:
       if (g_variant_get_boolean (value))
         g_string_append (string, "<true/>");
       else
         g_string_append (string, "<false/>");
       break;
 
-    case G_SIGNATURE_TYPE_BYTE:
+    case G_VARIANT_TYPE_CLASS_BYTE:
       g_string_append_printf (string, "<byte>0x%02x</byte>",
                               g_variant_get_byte (value));
       break;
 
-    case G_SIGNATURE_TYPE_INT16:
+    case G_VARIANT_TYPE_CLASS_INT16:
       g_string_append_printf (string, "<int16>%"G_GINT16_FORMAT"</int16>",
                               g_variant_get_int16 (value));
       break;
 
-    case G_SIGNATURE_TYPE_UINT16:
+    case G_VARIANT_TYPE_CLASS_UINT16:
       g_string_append_printf (string, "<uint16>%"G_GUINT16_FORMAT"</uint16>",
                               g_variant_get_uint16 (value));
       break;
 
-    case G_SIGNATURE_TYPE_INT32:
+    case G_VARIANT_TYPE_CLASS_INT32:
       g_string_append_printf (string, "<int32>%"G_GINT32_FORMAT"</int32>",
                               g_variant_get_int32 (value));
       break;
 
-    case G_SIGNATURE_TYPE_UINT32:
+    case G_VARIANT_TYPE_CLASS_UINT32:
       g_string_append_printf (string, "<uint32>%"G_GUINT32_FORMAT"</uint32>",
                               g_variant_get_uint32 (value));
       break;
 
-    case G_SIGNATURE_TYPE_INT64:
+    case G_VARIANT_TYPE_CLASS_INT64:
       g_string_append_printf (string, "<int64>%"G_GINT64_FORMAT"</int64>",
                               g_variant_get_int64 (value));
       break;
 
-    case G_SIGNATURE_TYPE_UINT64:
+    case G_VARIANT_TYPE_CLASS_UINT64:
       g_string_append_printf (string, "<uint64>%"G_GUINT64_FORMAT"</uint64>",
                               g_variant_get_uint64 (value));
       break;
 
-    case G_SIGNATURE_TYPE_DOUBLE:
+    case G_VARIANT_TYPE_CLASS_DOUBLE:
       g_string_append_printf (string, "<double>%f</double>",
                               g_variant_get_double (value));
       break;
 
     default:
-      g_error ("sorry... not handled yet: %s", g_signature_get (signature));
+      g_error ("sorry... not handled yet: %s",
+               g_variant_get_type_string (value));
   }
 
   g_variant_markup_newline (string, newlines);
@@ -241,6 +229,7 @@ g_variant_markup_print (GVariant *value,
   return string;
 }
 
+#if 0
 /* parser */
 typedef struct
 {
@@ -257,24 +246,24 @@ type_from_keyword (const char *keyword)
     GSignatureType type;
     const char *keyword;
   } list[] = {
-    { G_SIGNATURE_TYPE_BOOLEAN,          "boolean" },
-    { G_SIGNATURE_TYPE_BYTE,             "byte" },
-    { G_SIGNATURE_TYPE_INT16,            "int16" },
-    { G_SIGNATURE_TYPE_UINT16,           "uint16" },
-    { G_SIGNATURE_TYPE_INT32,            "int32" },
-    { G_SIGNATURE_TYPE_UINT32,           "uint32" },
-    { G_SIGNATURE_TYPE_INT64,            "int64" },
-    { G_SIGNATURE_TYPE_UINT64,           "uint64" },
-    { G_SIGNATURE_TYPE_DOUBLE,           "double" },
-    { G_SIGNATURE_TYPE_STRING,           "string" },
-    { G_SIGNATURE_TYPE_OBJECT_PATH,      "object-path" },
-    { G_SIGNATURE_TYPE_SIGNATURE,        "signature" },
-    { G_SIGNATURE_TYPE_VARIANT,          "variant" },
-    { G_SIGNATURE_TYPE_MAYBE,            "maybe" },
-    { G_SIGNATURE_TYPE_MAYBE,            "nothing" },
-    { G_SIGNATURE_TYPE_ARRAY,            "array" },
-    { G_SIGNATURE_TYPE_STRUCT,           "struct" },
-    { G_SIGNATURE_TYPE_DICT_ENTRY,       "dictionary-entry" }
+    { G_VARIANT_TYPE_CLASS_BOOLEAN,          "boolean" },
+    { G_VARIANT_TYPE_CLASS_BYTE,             "byte" },
+    { G_VARIANT_TYPE_CLASS_INT16,            "int16" },
+    { G_VARIANT_TYPE_CLASS_UINT16,           "uint16" },
+    { G_VARIANT_TYPE_CLASS_INT32,            "int32" },
+    { G_VARIANT_TYPE_CLASS_UINT32,           "uint32" },
+    { G_VARIANT_TYPE_CLASS_INT64,            "int64" },
+    { G_VARIANT_TYPE_CLASS_UINT64,           "uint64" },
+    { G_VARIANT_TYPE_CLASS_DOUBLE,           "double" },
+    { G_VARIANT_TYPE_CLASS_STRING,           "string" },
+    { G_VARIANT_TYPE_CLASS_OBJECT_PATH,      "object-path" },
+    { G_VARIANT_TYPE_CLASS_SIGNATURE,        "signature" },
+    { G_VARIANT_TYPE_CLASS_VARIANT,          "variant" },
+    { G_VARIANT_TYPE_CLASS_MAYBE,            "maybe" },
+    { G_VARIANT_TYPE_CLASS_MAYBE,            "nothing" },
+    { G_VARIANT_TYPE_CLASS_ARRAY,            "array" },
+    { G_VARIANT_TYPE_CLASS_STRUCT,           "struct" },
+    { G_VARIANT_TYPE_CLASS_DICT_ENTRY,       "dictionary-entry" }
   };
   gint i;
 
@@ -282,7 +271,7 @@ type_from_keyword (const char *keyword)
     if (!strcmp (keyword, list[i].keyword))
       return list[i].type;
 
-  return G_SIGNATURE_TYPE_INVALID;
+  return G_VARIANT_TYPE_CLASS_INVALID;
 }
 
 static GVariant *
@@ -349,7 +338,7 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
 
   type = type_from_keyword (element_name);
 
-  if (type == G_SIGNATURE_TYPE_INVALID)
+  if (type == G_VARIANT_TYPE_CLASS_INVALID)
     {
       g_set_error (error, 0, 0, /* XXX FIXME */
                    "the <%s> tag is unrecognised", element_name);
@@ -442,7 +431,7 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
           break;
 
       if (G_UNLIKELY (i == data->string->len) &&
-          type != G_SIGNATURE_TYPE_STRING)
+          type != G_VARIANT_TYPE_CLASS_STRING)
         {
           g_set_error (error, 0, 0, /* XXX FIXME */
                        "character data expected before </%s>",
@@ -454,43 +443,43 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
 
       switch (type)
       {
-        case G_SIGNATURE_TYPE_BOOLEAN:
+        case G_VARIANT_TYPE_CLASS_BOOLEAN:
           value = g_variant_new_boolean (parse_bool (string, &end));
           break;
 
-        case G_SIGNATURE_TYPE_BYTE:
+        case G_VARIANT_TYPE_CLASS_BYTE:
           value = g_variant_new_byte (g_ascii_strtoll (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_INT16:
+        case G_VARIANT_TYPE_CLASS_INT16:
           value = g_variant_new_int16 (g_ascii_strtoll (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_UINT16:
+        case G_VARIANT_TYPE_CLASS_UINT16:
           value = g_variant_new_uint16 (g_ascii_strtoull (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_INT32:
+        case G_VARIANT_TYPE_CLASS_INT32:
           value = g_variant_new_int32 (g_ascii_strtoll (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_UINT32:
+        case G_VARIANT_TYPE_CLASS_UINT32:
           value = g_variant_new_uint32 (g_ascii_strtoull (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_INT64:
+        case G_VARIANT_TYPE_CLASS_INT64:
           value = g_variant_new_int64 (g_ascii_strtoll (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_UINT64:
+        case G_VARIANT_TYPE_CLASS_UINT64:
           value = g_variant_new_uint64 (g_ascii_strtoull (string, &end, 0));
           break;
 
-        case G_SIGNATURE_TYPE_DOUBLE:
+        case G_VARIANT_TYPE_CLASS_DOUBLE:
           value = g_variant_new_double (g_ascii_strtod (string, &end));
           break;
 
-        case G_SIGNATURE_TYPE_STRING:
+        case G_VARIANT_TYPE_CLASS_STRING:
           value = g_variant_new_string (data->string->str);
           end = (char *) "";
           break;
@@ -583,7 +572,7 @@ g_variant_markup_parser_start_parse (GMarkupParseContext *context,
   GVariantParseData *data;
 
   data = g_slice_new (GVariantParseData);
-  data->builder = g_variant_builder_new (G_SIGNATURE_TYPE_VARIANT,
+  data->builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_VARIANT,
                                          signature);
   data->terminal_value = FALSE;
   data->string = NULL;
@@ -627,7 +616,7 @@ g_variant_markup_parse (const char  *string,
   GVariant *child;
 
   data = g_slice_new (GVariantParseData);
-  data->builder = g_variant_builder_new (G_SIGNATURE_TYPE_VARIANT,
+  data->builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_VARIANT,
                                          signature);
   data->terminal_value = FALSE;
   data->string = NULL;
@@ -658,3 +647,4 @@ g_variant_markup_parse (const char  *string,
 
   return child;
 }
+#endif

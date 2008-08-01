@@ -524,7 +524,7 @@ g_variant_builder_close (GVariantBuilder *child)
   parent = child->parent;
   child->parent = NULL;
 
-  value = g_variant_builder_end (child, parent->expected);
+  value = g_variant_builder_end (child);
   g_variant_builder_add_value (parent, value);
 
   return parent;
@@ -591,14 +591,13 @@ g_variant_builder_new (GVariantTypeClass   class,
 }
 
 GVariant *
-g_variant_builder_end (GVariantBuilder    *builder,
-                       const GVariantType *type)
+g_variant_builder_end (GVariantBuilder *builder)
 {
   GVariantType *my_type;
   GError *error = NULL;
   GVariant *value;
 
-  if G_UNLIKELY (!g_variant_builder_check_end (builder, type, &error))
+  if G_UNLIKELY (!g_variant_builder_check_end (builder, &error))
     g_error ("g_variant_builder_end: %s", error->message);
 
   g_variant_builder_resize (builder, builder->offset);
@@ -652,7 +651,6 @@ g_variant_builder_end (GVariantBuilder    *builder,
 
 gboolean
 g_variant_builder_check_end (GVariantBuilder     *builder,
-                             const GVariantType  *type,
                              GError             **error)
 {
   g_assert (builder != NULL);
@@ -897,4 +895,16 @@ void
 g_variant_flatten (GVariant *value)
 {
   g_variant_get_data (value);
+}
+
+const gchar *
+g_variant_get_type_string (GVariant *value)
+{
+  return (const gchar *) g_variant_get_type (value);
+}
+
+GVariantTypeClass
+g_variant_get_type_class (GVariant *value)
+{
+  return g_variant_type_get_natural_class (g_variant_get_type (value));
 }

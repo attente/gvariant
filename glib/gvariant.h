@@ -116,12 +116,10 @@ gboolean                        g_variant_builder_check_add             (GVarian
                                                                          const GVariantType   *type,
                                                                          GError              **error);
 gboolean                        g_variant_builder_check_end             (GVariantBuilder      *builder,
-                                                                         const GVariantType   *type,
                                                                          GError              **error);
 GVariantBuilder                *g_variant_builder_new                   (GVariantTypeClass     class,
                                                                          const GVariantType   *type);
-GVariant                       *g_variant_builder_end                   (GVariantBuilder      *builder,
-                                                                         const GVariantType   *type);
+GVariant                       *g_variant_builder_end                   (GVariantBuilder      *builder);
 void                            g_variant_builder_cancel                (GVariantBuilder      *builder);
 
 /* markup printing/parsing */
