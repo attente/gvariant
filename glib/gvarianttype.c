@@ -141,7 +141,16 @@ g_variant_type_free (GVariantType *type)
 GVariantType *
 g_variant_type_copy (const GVariantType *type)
 {
-  return g_memdup (type, g_variant_type_get_string_length (type));
+  gsize length;
+  gchar *new;
+
+  length = g_variant_type_get_string_length (type);
+  new = g_malloc (length + 1);
+
+  memcpy (new, type, length);
+  new[length] = '\0';
+
+  return (GVariantType *) new;
 }
 
 /**
@@ -172,10 +181,8 @@ gsize
 g_variant_type_get_string_length (const GVariantType *type)
 {
   const gchar *type_string = (const gchar *) type;
-  gsize index;
-  gint brackets;
-
-  brackets = 0;
+  gint brackets = 0;
+  gsize index = 0;
 
   do
     {

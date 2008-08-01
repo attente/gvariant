@@ -12,7 +12,7 @@ AC_OUTPUT([
   docs/reference/Makefile
   docs/Makefile
 
-  glib/gvariant-tests/Makefile
+  glib/tests/Makefile
   glib/gvariant.pc
   glib/Makefile
 

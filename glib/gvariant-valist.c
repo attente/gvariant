@@ -317,8 +317,8 @@ g_variant_valist_new (const gchar **format_string,
         GVariantType *type;
         GVariant *value;
 
-        string = *format_string;
-        type = g_variant_format_string_get_type (&string);
+        string = (*format_string) + 1;
+        type = g_variant_format_string_get_type (format_string);
         builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_MAYBE, type);
         g_variant_type_free (type);
 
@@ -328,21 +328,18 @@ g_variant_valist_new (const gchar **format_string,
             if ((string = va_arg (*app, const gchar *)))
               g_variant_builder_add_value (builder,
                                            g_variant_new_string (string));
-            *format_string += 2;
             break;
 
           case 'o':
             if ((string = va_arg (*app, const gchar *)))
               g_variant_builder_add_value (builder,
                                            g_variant_new_object_path (string));
-            *format_string += 2;
             break;
 
           case 'g':
             if ((string = va_arg (*app, const gchar *)))
               g_variant_builder_add_value (builder,
                                            g_variant_new_signature (string));
-            *format_string += 2;
             break;
 
           case '*':
@@ -353,7 +350,8 @@ g_variant_valist_new (const gchar **format_string,
 
           case 'v':
             if ((value = va_arg (*app, GVariant *)))
-              g_variant_builder_add_value (builder, g_variant_new_variant (value));
+              g_variant_builder_add_value (builder,
+                                           g_variant_new_variant (value));
             break;
             
           default:
@@ -364,8 +362,9 @@ g_variant_valist_new (const gchar **format_string,
 
               if (just)
                 {
-                  value = g_variant_valist_new (format_string, app);
+                  value = g_variant_valist_new (&string, app);
                   g_variant_builder_add_value (builder, value);
+                  g_assert (string == *format_string);
                 }
             }
         }
@@ -423,10 +422,12 @@ g_variant_new_va (const gchar **format_string,
   GVariant *value;
 
   value = g_variant_valist_new (format_string, app);
-  g_variant_flatten (value);
+ // g_variant_flatten (value);
 
   return value;
 }
+
+
 #if 0
 void
 g_variant_get_va (GVariant     *value,

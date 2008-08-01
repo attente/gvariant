@@ -385,9 +385,8 @@ g_variant_type_info_get (const GVariantType *type)
           break;
       }
 
-      g_hash_table_insert (g_variant_type_info_table, info->type, info);
-
       info->type = g_variant_type_copy (type);
+      g_hash_table_insert (g_variant_type_info_table, info->type, info);
       info->ref_count = 1;
     }
   else

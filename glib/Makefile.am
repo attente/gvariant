@@ -1,4 +1,4 @@
-SUBDIRS = . gvariant-tests
+SUBDIRS = . tests
 
 lib_LTLIBRARIES = libgvariant.la
 
