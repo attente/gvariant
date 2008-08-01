@@ -13,6 +13,150 @@
 
 #include "gvariant-private.h"
 
+
+
+
+/**
+ * g_variant_new:
+ * @format_string: a #GVariant format string
+ * @...: arguments, as per @format_string
+ * @returns: a new floating #GVariant instance
+ *
+ * Creates a new #GVariant instance.
+ *
+ * Think of this function as an analogue to g_strdup_printf().
+ *
+ * The type of the created instance and the arguments that are
+ * expected by this function are determined by @format_string.  In the
+ * most simple case, @format_string is exactly equal to a concrete
+ * #GVariantType type string and the result is of that type.  All
+ * exceptions to this case are explicitly mentioned below.
+ *
+ * The arguments that this function collects are determined by
+ * scanning @format_string from start to end.  Brackets do not impact
+ * the collection of arguments.  Each other character that is
+ * encountered will result in an argument being collected.
+ *
+ * Arguments for the base types are expected as follows:
+ * <variablelist>
+ *   <varlistentry>
+ *     <term>b</term>
+ *     <listitem>a #gboolean is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>y</term>
+ *     <listitem>a #guchar is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>n</term>
+ *     <listitem>a #gint16 is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>q</term>
+ *     <listitem>a #guint16 is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>i</term>
+ *     <listitem>a #gint32 is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>u</term>
+ *     <listitem>a #guint32 is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>x</term>
+ *     <listitem>a #gint64 is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>t</term>
+ *     <listitem>a #guint64 is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>d</term>
+ *     <listitem>a #gdouble is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>s</term>
+ *     <listitem>a non-%NULL (const #gchar *) is collected</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>o</term>
+ *     <listitem>
+ *       a non-%NULL (const #gchar *) is collected.  it must be a
+ *       valid DBus object path.
+ *     </listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>g</term>
+ *     <listitem>
+ *       a non-%NULL (const #gchar *) is collected.  it must be a
+ *       valid DBus type signature string.
+ *     </listitem>
+ *   </varlistentry>
+ * </variablelist>
+ *
+ * If a 'v' character is encountered in @format_string then a
+ * (#GVariant *) is collected which must be non-%NULL and must point
+ * to a valid #GVariant instance.
+ *
+ * If an array type is encountered in @format_string, a
+ * #GVariantBuilder is collected and has g_variant_builder_end()
+ * called on it.  The type of the array has no impact on argument
+ * collection but is checked against the type of the array and can be
+ * used to infer the type of an empty array.
+ *
+ * If a maybe type is encountered in @format_string, then the expected
+ * arguments vary depending on the type.
+ *
+ * <variablelist>
+ *   <varlistentry>
+ *     <term>ms</term>
+ *     <listitem>
+ *       a possibly-%NULL (const #gchar *) is collected
+ *     </listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>mo</term>
+ *     <listitem>as per previous</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>mg</term>
+ *     <listitem>as per previous</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>mv</term>
+ *     <listitem>
+ *       a possibly-%NULL (#GVariant *) is collected
+ *     </listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>m*</term>
+ *     <listitem>as per previous</listitem>
+ *   </varlistentry>
+ *   <varlistentry>
+ *     <term>others...</term>
+ *     <listitem>
+ *       a #gboolean is collected.  If the collected value is %FALSE
+ *       then the maybe is Nothing and the arguments corresponding to
+ *       the element type of the maybe are not collected.  If %TRUE,
+ *       then the arguments are collected as if there were no 'm'.
+ *     </listitem>
+ *   </varlistentry>
+ * </variablelist>
+ *
+ * If a '*' character is encountered in @format_string then a
+ * (#GVariant *) is collected which must be non-%NULL and must point
+ * to a valid #GVariant instance.  This #GVariant is inserted directly
+ * at the given position.
+ *
+ * Please note that the syntax of the format string is very likely to
+ * be extended in the future.
+ **/
+
+
+
+
+
 static void
 g_variant_valist_free (GVariant     *value,
                        gboolean      free,
@@ -568,7 +712,7 @@ g_variant_new_full (GSignature signature,
 }
 
 /**
- * g_variant_new:
+ * qg_variant_new:
  * @signature_string: a #GSignature string
  * @...: position paramaters as per
  *   @signature_string
