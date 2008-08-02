@@ -77,7 +77,7 @@ g_variant_markup_print (GVariant *value,
             g_string_append (string, "</maybe>");
           }
         else
-          g_string_append_printf (string, "<nothing signature='%s'/>",
+          g_string_append_printf (string, "<nothing type='%s'/>",
                                   g_variant_get_type_string (value));
 
         break;
@@ -105,7 +105,7 @@ g_variant_markup_print (GVariant *value,
             g_string_append (string, "</array>");
           }
         else
-          g_string_append_printf (string, "<array signature='%s'/>",
+          g_string_append_printf (string, "<array type='%s'/>",
                                   g_variant_get_type_string (value));
 
         break;
@@ -229,7 +229,6 @@ g_variant_markup_print (GVariant *value,
   return string;
 }
 
-#if 0
 /* parser */
 typedef struct
 {
@@ -238,12 +237,12 @@ typedef struct
   GString *string;
 } GVariantParseData;
 
-static GSignatureType
-type_from_keyword (const char *keyword)
+static GVariantTypeClass
+type_class_from_keyword (const char *keyword)
 {
   struct keyword_mapping
   {
-    GSignatureType type;
+    GVariantTypeClass class;
     const char *keyword;
   } list[] = {
     { G_VARIANT_TYPE_CLASS_BOOLEAN,          "boolean" },
@@ -269,7 +268,7 @@ type_from_keyword (const char *keyword)
 
   for (i = 0; i < G_N_ELEMENTS (list); i++)
     if (!strcmp (keyword, list[i].keyword))
-      return list[i].type;
+      return list[i].class;
 
   return G_VARIANT_TYPE_CLASS_INVALID;
 }
@@ -299,9 +298,9 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
                                        GError              **error)
 {
   GVariantParseData *data = user_data;
-  const char *signature_string;
-  GSignature signature;
-  GSignatureType type;
+  const gchar *type_string;
+  const GVariantType *type;
+  GVariantTypeClass class;
   GVariant *value;
 
   if (data->string != NULL)
@@ -325,9 +324,8 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
   if ((value = value_from_keyword (element_name)))
     {
       if (!g_variant_builder_check_add (data->builder,
-                                        g_signature_type (g_variant_get_signature (value)),
-                                        g_variant_get_signature (value),
-                                        error))
+                                        g_variant_get_type_class (value),
+                                        g_variant_get_type (value), error))
         return;
 
       g_variant_builder_add_value (data->builder, value);
@@ -336,9 +334,9 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
       return;
     }
 
-  type = type_from_keyword (element_name);
+  class = type_class_from_keyword (element_name);
 
-  if (type == G_VARIANT_TYPE_CLASS_INVALID)
+  if (class == G_VARIANT_TYPE_CLASS_INVALID)
     {
       g_set_error (error, 0, 0, /* XXX FIXME */
                    "the <%s> tag is unrecognised", element_name);
@@ -350,26 +348,26 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
                                     error,
                                     G_MARKUP_COLLECT_OPTIONAL |
                                       G_MARKUP_COLLECT_STRING,
-                                    "signature", &signature_string,
+                                    "type", &type_string,
                                     G_MARKUP_COLLECT_INVALID))
     return;
 
-  if (signature_string && !g_signature_is_valid (signature_string))
+  if (type_string && !g_variant_type_string_is_valid (type_string))
     {
       g_set_error (error, 0, 0, /* XXX FIXME */
-                   "'%s' is not a valid signature string", signature_string);
+                   "'%s' is not a valid type string", type_string);
       return;
     }
 
-  signature = signature_string ? g_signature (signature_string) : NULL;
+  type = type_string ? G_VARIANT_TYPE (type_string) : NULL;
 
-  if (!g_variant_builder_check_add (data->builder, type, signature, error))
+  if (!g_variant_builder_check_add (data->builder, class, type, error))
     return;
 
-  if (g_signature_type_is_basic (type))
+  if (g_variant_type_class_is_basic (class))
     data->string = g_string_new (NULL);
   else
-    data->builder = g_variant_builder_open (data->builder, type, signature);
+    data->builder = g_variant_builder_open (data->builder, class, type);
 
   /* special case: <nothing/> may contain no children */
   if (strcmp (element_name, "nothing") == 0)
@@ -406,7 +404,7 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
                                      GError              **error)
 {
   GVariantParseData *data = user_data;
-  GSignatureType type;
+  GVariantTypeClass class;
 
   if (data->terminal_value)
     {
@@ -414,9 +412,9 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
       return;
     }
 
-  type = type_from_keyword (element_name);
+  class = type_class_from_keyword (element_name);
 
-  if (g_signature_type_is_basic (type))
+  if (g_variant_type_class_is_basic (class))
     {
       GVariant *value;
       char *string;
@@ -431,7 +429,7 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
           break;
 
       if (G_UNLIKELY (i == data->string->len) &&
-          type != G_VARIANT_TYPE_CLASS_STRING)
+          class != G_VARIANT_TYPE_CLASS_STRING)
         {
           g_set_error (error, 0, 0, /* XXX FIXME */
                        "character data expected before </%s>",
@@ -441,7 +439,7 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
 
       string = &data->string->str[i];
 
-      switch (type)
+      switch (class)
       {
         case G_VARIANT_TYPE_CLASS_BOOLEAN:
           value = g_variant_new_boolean (parse_bool (string, &end));
@@ -550,7 +548,7 @@ g_variant_markup_parser_error (GMarkupParseContext *context,
   data->string = NULL;
 
   if (data->builder)
-    g_variant_builder_abort (data->builder);
+    g_variant_builder_cancel (data->builder);
   data->builder = NULL;
 
   g_slice_free (GVariantParseData, data);
@@ -567,13 +565,12 @@ GMarkupParser g_variant_markup_parser =
 
 void
 g_variant_markup_parser_start_parse (GMarkupParseContext *context,
-                                     GSignature           signature)
+                                     const GVariantType  *type)
 {
   GVariantParseData *data;
 
   data = g_slice_new (GVariantParseData);
-  data->builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_VARIANT,
-                                         signature);
+  data->builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_VARIANT, type);
   data->terminal_value = FALSE;
   data->string = NULL;
 
@@ -606,9 +603,9 @@ g_variant_markup_parser_end_parse (GMarkupParseContext  *context,
 }
 
 GVariant *
-g_variant_markup_parse (const char  *string,
-                        GSignature   signature,
-                        GError     **error)
+g_variant_markup_parse (const gchar         *string,
+                        const GVariantType  *type,
+                        GError             **error)
 {
   GMarkupParseContext *context;
   GVariantParseData *data;
@@ -616,8 +613,7 @@ g_variant_markup_parse (const char  *string,
   GVariant *child;
 
   data = g_slice_new (GVariantParseData);
-  data->builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_VARIANT,
-                                         signature);
+  data->builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_VARIANT, type);
   data->terminal_value = FALSE;
   data->string = NULL;
 
@@ -647,4 +643,3 @@ g_variant_markup_parse (const char  *string,
 
   return child;
 }
-#endif

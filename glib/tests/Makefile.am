@@ -6,3 +6,6 @@ AM_CFLAGS       = $(glib_CFLAGS) -I$(srcdir)/.. -I$(top_srcdir) -g
 AM_LDFLAGS      = ../libgvariant.la
 
 TEST_PROGS     += varargs
+TEST_PROGS     += gvariant-endian
+TEST_PROGS     += gvariant-markup
+TEST_PROGS     += gvariant-serialiser

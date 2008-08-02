@@ -1,2 +1,5 @@
 link-test
+gvariant-endian
+gvariant-markup
+gvariant-serialiser
 varargs
