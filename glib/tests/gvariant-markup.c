@@ -19,7 +19,7 @@
   } G_STMT_END
 
 const char *verbatim_tests[] = {
-  "<array signature='ai'/>",
+  "<array type='ai'/>",
 
   "<struct>"
     "<array>"
@@ -28,9 +28,9 @@ const char *verbatim_tests[] = {
       "<int32>3</int32>"
     "</array>"
     "<array>"
-      "<array signature='aaai'/>"
-      "<array signature='aaai'/>"
-      "<array signature='aaai'/>"
+      "<array type='aaai'/>"
+      "<array type='aaai'/>"
+      "<array type='aaai'/>"
     "</array>"
   "</struct>",
 
@@ -46,7 +46,7 @@ const char *verbatim_tests[] = {
     "<array>"
       "<string>foo</string>"
     "</array>"
-    "<array signature='as'/>"
+    "<array type='as'/>"
   "</array>",
 
   "<maybe>"
@@ -96,7 +96,7 @@ check_verbatim (gconstpointer data)
   else
     g_assert (error == NULL);
 
-  g_variant_get_data (value);
+  //g_variant_flatten (value);
 
   out = g_variant_markup_print (value, NULL, FALSE, 0, 0);
   g_assert_cmpstr (markup, ==, out->str);

@@ -554,7 +554,7 @@ g_variant_builder_new (GVariantTypeClass   class,
     case G_VARIANT_TYPE_CLASS_VARIANT:
       builder->children_allocated = 1;
       builder->expected = builder->type;
-      return builder;
+      break;
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
       builder->children_allocated = 8;
@@ -596,6 +596,8 @@ g_variant_builder_end (GVariantBuilder *builder)
   GVariantType *my_type;
   GError *error = NULL;
   GVariant *value;
+
+  g_assert (builder->parent == NULL);
 
   if G_UNLIKELY (!g_variant_builder_check_end (builder, &error))
     g_error ("g_variant_builder_end: %s", error->message);
@@ -655,7 +657,6 @@ g_variant_builder_check_end (GVariantBuilder     *builder,
 {
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
-  g_assert (builder->parent == NULL);
 
   switch (builder->class)
   {
@@ -669,8 +670,7 @@ g_variant_builder_check_end (GVariantBuilder     *builder,
       break;
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
-      if (builder->type == NULL ||
-          !g_variant_type_is_concrete (builder->type))
+      if (builder->type == NULL && builder->offset == 0)
         {
           g_set_error (error, 0, 0,
                        "unable to infer type for empty array");
@@ -679,8 +679,7 @@ g_variant_builder_check_end (GVariantBuilder     *builder,
       break;
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
-      if (builder->type == NULL ||
-          !g_variant_type_is_concrete (builder->type))
+      if (builder->type == NULL && builder->offset == 0)
         {
           g_set_error (error, 0, 0,
                        "unable to infer signature for maybe with no value");
@@ -729,7 +728,7 @@ g_variant_builder_check_add (GVariantBuilder     *builder,
 {
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
-  g_assert (type != G_VARIANT_TYPE_CLASS_INVALID);
+  g_assert (class != G_VARIANT_TYPE_CLASS_INVALID);
 
   if (class == G_VARIANT_TYPE_CLASS_VARIANT)
     type = NULL;
@@ -746,7 +745,7 @@ g_variant_builder_check_add (GVariantBuilder     *builder,
       return FALSE;
     }
 
-  if (g_variant_type_get_natural_class (type) != class)
+  if (type && g_variant_type_get_natural_class (type) != class)
     {
       gchar *type_str;
 

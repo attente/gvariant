@@ -305,21 +305,25 @@ base_info_new (const GVariantTypeClass class)
   {
     case G_VARIANT_TYPE_CLASS_BOOLEAN:
     case G_VARIANT_TYPE_CLASS_BYTE:
-      info->alignment = info->fixed_size = 1 - 1;
+      info->alignment = 1 - 1;
+      info->fixed_size = 1;
       break;
 
     case G_VARIANT_TYPE_CLASS_UINT16:
     case G_VARIANT_TYPE_CLASS_INT16:
-      info->alignment = info->fixed_size = 2 - 1;
+      info->alignment = 2 - 1;
+      info->fixed_size = 2;
 
     case G_VARIANT_TYPE_CLASS_UINT32:
     case G_VARIANT_TYPE_CLASS_INT32:
-      info->alignment = info->fixed_size = 4 - 1;
+      info->alignment = 4 - 1;
+      info->fixed_size = 4;
 
     case G_VARIANT_TYPE_CLASS_UINT64:
     case G_VARIANT_TYPE_CLASS_INT64:
     case G_VARIANT_TYPE_CLASS_DOUBLE:
-      info->alignment = info->fixed_size = 8 - 1;
+      info->alignment = 8 - 1;
+      info->fixed_size = 8;
 
     case G_VARIANT_TYPE_CLASS_VARIANT:
       info->alignment = 8 - 1;

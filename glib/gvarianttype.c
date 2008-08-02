@@ -621,10 +621,10 @@ g_variant_type_n_items (const GVariantType *type)
 {
   gsize count = 0;
 
-  type = g_variant_type_first (type);
-  do
+  for (type = g_variant_type_first (type);
+       type;
+       type = g_variant_type_next (type))
     count++;
-  while ((type = g_variant_type_next (type)));
 
   return count;
 }
