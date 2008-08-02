@@ -50,7 +50,7 @@ g_variant_type_info_get_type_class (GVariantTypeInfo *info)
 {
   g_assert_cmpint (info->ref_count, >, 0);
 
-  return g_variant_type_get_natural_class (info->type);
+  return g_variant_type_get_class (info->type);
 }
 
 void
@@ -164,7 +164,7 @@ struct_info_new (const GVariantType *type)
   info = g_slice_new (StructInfo);
   info->self.info_class = STRUCT_INFO_CLASS;
 
-  if (!g_variant_type_is_of_class (type, G_VARIANT_TYPE_CLASS_DICT_ENTRY))
+  if (!g_variant_type_has_class (type, G_VARIANT_TYPE_CLASS_DICT_ENTRY))
     info->n_members = g_variant_type_n_items (type);
   else
     info->n_members = 2;
@@ -373,7 +373,7 @@ g_variant_type_info_get (const GVariantType *type)
     {
       GVariantTypeClass class;
 
-      class = g_variant_type_get_natural_class (type);
+      class = g_variant_type_get_class (type);
 
       switch (class)
       {

@@ -17,7 +17,6 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
 
 /**
  * GVariantTypeClass:
- *
  * @G_VARIANT_TYPE_CLASS_INVALID: the class of no type
  * @G_VARIANT_TYPE_CLASS_BOOLEAN: the class containing the type %G_VARIANT_TYPE_BOOLEAN
  * @G_VARIANT_TYPE_CLASS_BYTE: the class containing the type %G_VARIANT_TYPE_BYTE
@@ -33,21 +32,11 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * @G_VARIANT_TYPE_CLASS_SIGNATURE: the class containing the type %G_VARIANT_TYPE_SIGNATURE
  * @G_VARIANT_TYPE_CLASS_VARIANT: the class containing the type %G_VARIANT_TYPE_VARIANT
  * @G_VARIANT_TYPE_CLASS_MAYBE: the class containing all maybe types
- *                              (any type matching %G_VARIANT_TYPE_ANY_MAYBE)
  * @G_VARIANT_TYPE_CLASS_ARRAY: the class containing all array types
- *                              (any type matching %G_VARIANT_TYPE_ANY_ARRAY)
  * @G_VARIANT_TYPE_CLASS_STRUCT: the class containing all structure types
- *                               (any type matching %G_VARIANT_TYPE_ANY_STRUCT)
  * @G_VARIANT_TYPE_CLASS_DICT_ENTRY: the class containing all dictionary entry types
- *                                   (any type matching %G_VARIANT_TYPE_ANY_DICT_ENTRY)
- * @G_VARIANT_TYPE_CLASS_ALL: the class containing all types
- *                            (any type matching %G_VARIANT_TYPE_ANY)
- * @G_VARIANT_TYPE_CLASS_BASIC: the class containing all basic types
- *                              (any type matching %G_VARIANT_TYPE_BASIC)
- * @G_VARIANT_TYPE_CLASS_FIXED: the class containing all fixed-size types
- *                              (any type matching %G_VARIANT_TYPE_FIXED)
- * @G_VARIANT_TYPE_CLASS_FIXED_BASIC: the class containing all fixed-size basic types
- *                                    (any type matching %G_VARIANT_TYPE_FIXED_BASIC)
+ * @G_VARIANT_TYPE_CLASS_ANY: the class containing the type %G_VARIANT_TYPE_ANY
+ * @G_VARIANT_TYPE_CLASS_ANY_BASIC: the class containing the type %G_VARIANT_TYPE_ANY_BASIC
  *
  * A enumerated type to group #GVariantType instances into classes.
  *
@@ -56,8 +45,10 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * statement over the #GVariantTypeClass of the type and its component
  * sub-types.
  *
- * A #GVariantType is said to "be of" a given #GVariantTypeClass.  A
- * #GVariantType can have several different type classes.  For
+ * A #GVariantType is said to "have" a given #GVariantTypeClass.  The
+ * type classes are non-overlapping, so a given #GVariantType can only
+ * have a single type class.
+ * #GVariantType can have only one several different type classes.  For
  * example, %G_VARIANT_TYPE_BOOLEAN is of the following classes:
  * %G_VARIANT_TYPE_CLASS_BOOLEAN, %G_VARIANT_TYPE_CLASS_BASIC,
  * %G_VARIANT_TYPE_CLASS_FIXED, %G_VARIANT_TYPE_CLASS_FIXED_BASIC,
@@ -99,11 +90,8 @@ typedef enum
   G_VARIANT_TYPE_CLASS_STRUCT             = 'r',
   G_VARIANT_TYPE_CLASS_DICT_ENTRY         = 'e',
 
-  G_VARIANT_TYPE_CLASS_BASIC              = '?',
-  G_VARIANT_TYPE_CLASS_FIXED              = '@',
-  G_VARIANT_TYPE_CLASS_FIXED_BASIC        = '&',
-
-  G_VARIANT_TYPE_CLASS_ALL                = '*',
+  G_VARIANT_TYPE_CLASS_ANY                = '*',
+  G_VARIANT_TYPE_CLASS_ANY_BASIC          = '?'
 } GVariantTypeClass;
 
 /**
@@ -305,9 +293,9 @@ gboolean                        g_variant_type_matches                  (const G
                                                                          const GVariantType  *pattern);
 
 /* class functions */
-gboolean                        g_variant_type_is_of_class              (const GVariantType  *type,
+gboolean                        g_variant_type_has_class                (const GVariantType  *type,
                                                                          GVariantTypeClass    class);
-GVariantTypeClass               g_variant_type_get_natural_class        (const GVariantType  *type);
+GVariantTypeClass               g_variant_type_get_class                (const GVariantType  *type);
 gboolean                        g_variant_type_class_is_container       (GVariantTypeClass    class);
 gboolean                        g_variant_type_class_is_basic           (GVariantTypeClass    class);
 

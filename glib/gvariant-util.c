@@ -459,7 +459,7 @@ g_variant_builder_check_add_value (GVariantBuilder  *builder,
   GVariantTypeClass class;
 
   type = g_variant_get_type (value);
-  class = g_variant_type_get_natural_class (type);
+  class = g_variant_type_get_class (type);
 
   return g_variant_builder_check_add (builder, class, type, error);
 }
@@ -538,7 +538,7 @@ g_variant_builder_new (GVariantTypeClass   class,
 
   g_assert (type == NULL || g_variant_type_is_concrete (type));
   g_assert (class == G_VARIANT_TYPE_CLASS_VARIANT ||
-            type == NULL || g_variant_type_is_of_class (type, class));
+            type == NULL || g_variant_type_has_class (type, class));
 
   builder = g_slice_new (GVariantBuilder);
   builder->parent = NULL;
@@ -745,7 +745,7 @@ g_variant_builder_check_add (GVariantBuilder     *builder,
       return FALSE;
     }
 
-  if (type && g_variant_type_get_natural_class (type) != class)
+  if (type && g_variant_type_get_class (type) != class)
     {
       gchar *type_str;
 
@@ -759,12 +759,12 @@ g_variant_builder_check_add (GVariantBuilder     *builder,
   /* we now know that class is the natural class of a concrete type */
 
   if (builder->expected &&
-      !g_variant_type_is_of_class (builder->expected, class))
+      !g_variant_type_has_class (builder->expected, class))
     {
       g_set_error (error, G_VARIANT_BUILDER_ERROR,
                    G_VARIANT_BUILDER_ERROR_TYPE,
                    "expecting value of class '%c', not '%c'",
-                   g_variant_type_get_natural_class (builder->expected),
+                   g_variant_type_get_class (builder->expected),
                    class);
       return FALSE;
     }
@@ -905,5 +905,5 @@ g_variant_get_type_string (GVariant *value)
 GVariantTypeClass
 g_variant_get_type_class (GVariant *value)
 {
-  return g_variant_type_get_natural_class (g_variant_get_type (value));
+  return g_variant_type_get_class (g_variant_get_type (value));
 }

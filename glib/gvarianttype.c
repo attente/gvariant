@@ -478,7 +478,7 @@ g_variant_type_matches (const GVariantType *type,
         {
           const GVariantType *target_type = G_VARIANT_TYPE (type_string);
 
-          if (!g_variant_type_is_of_class (target_type, pattern_char))
+          if (!g_variant_type_has_class (target_type, pattern_char))
             return FALSE;
 
           type_string += g_variant_type_get_string_length (target_type);
@@ -489,26 +489,13 @@ g_variant_type_matches (const GVariantType *type,
 }
 
 gboolean
-g_variant_type_is_of_class (const GVariantType *type,
-                            GVariantTypeClass   class)
+g_variant_type_has_class (const GVariantType *type,
+                          GVariantTypeClass   class)
 {
   char first_char = *(const gchar *) type;
 
   switch (class)
   {
-    case G_VARIANT_TYPE_CLASS_ALL:
-      return TRUE;
-
-    case G_VARIANT_TYPE_CLASS_FIXED:
-      return g_variant_type_is_fixed_size (type);
-      
-    case G_VARIANT_TYPE_CLASS_BASIC:
-      return g_variant_type_is_basic (type);
-
-    case G_VARIANT_TYPE_CLASS_FIXED_BASIC:
-      return g_variant_type_is_basic (type) &&
-             g_variant_type_is_fixed_size (type);
-
     case G_VARIANT_TYPE_CLASS_STRUCT:
       return first_char == '(';
 
@@ -521,7 +508,7 @@ g_variant_type_is_of_class (const GVariantType *type,
 }
 
 GVariantTypeClass
-g_variant_type_get_natural_class (const GVariantType *type)
+g_variant_type_get_class (const GVariantType *type)
 {
   char first_char = *(const gchar *) type;
 
@@ -538,6 +525,16 @@ g_variant_type_get_natural_class (const GVariantType *type)
   }
 }
 
+/**
+ * g_variant_type_class_is_container:
+ * @class: a #GVariantTypeClass
+ * @returns: %TRUE if @class is a container class
+ *
+ * Determines if @class is a container class.
+ *
+ * The following are considered to be container classes: maybe, array,
+ * struct, dict_entry and variant.
+ **/
 gboolean
 g_variant_type_class_is_container (GVariantTypeClass class)
 {
@@ -555,6 +552,18 @@ g_variant_type_class_is_container (GVariantTypeClass class)
   }
 }
 
+/**
+ * g_variant_type_class_is_basic:
+ * @class: a #GVariantTypeClass
+ * @returns: %TRUE if @class is a basic class
+ *
+ * Determines if @class is a basic class.
+ *
+ * The following are considered to be basic classes: boolean, byte,
+ * the signed and unsigned integer classes, double, string, object
+ * path and signature.  Additionally, the 'basic' type class is also
+ * considered to be basic.
+ **/
 gboolean
 g_variant_type_class_is_basic (GVariantTypeClass class)
 {
@@ -572,8 +581,7 @@ g_variant_type_class_is_basic (GVariantTypeClass class)
     case G_VARIANT_TYPE_CLASS_STRING:
     case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
     case G_VARIANT_TYPE_CLASS_SIGNATURE:
-    case G_VARIANT_TYPE_CLASS_BASIC:
-    case G_VARIANT_TYPE_CLASS_FIXED_BASIC:
+    case G_VARIANT_TYPE_CLASS_ANY_BASIC:
       return TRUE;
 
     default:

@@ -8,7 +8,8 @@
 
   <chapter id='gvariant'>
     <title>GVariant</title>
-    <xi:include href="xml/gsignature.xml"/>
+    <xi:include href="xml/GVariantTypeClass.xml"/>
+    <xi:include href="xml/GVariantType.xml"/>
     <xi:include href="xml/gvariant.xml"/>
     <xi:include href="xml/gvariant-loadstore.xml"/>
   </chapter>
