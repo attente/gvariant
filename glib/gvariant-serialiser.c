@@ -196,7 +196,7 @@ g_variant_serialiser_sub (GVariantSerialised  container,
 {
   GVariantSerialised result = { g_variant_type_info_ref (type) };
 
-  if G_UNLIKELY (end < start || container.size < end)
+  if G_LIKELY (start < end && end < container.size)
     {
       result.data = &container.data[start];
       result.size = end - start;
@@ -213,6 +213,8 @@ g_variant_serialiser_sub (GVariantSerialised  container,
 gsize
 g_variant_serialised_n_children (GVariantSerialised container)
 {
+  g_variant_serialised_assert_invariant (container);
+
   switch (g_variant_type_info_get_type_class (container.type))
   {
     case G_VARIANT_TYPE_CLASS_VARIANT:
@@ -285,6 +287,8 @@ GVariantSerialised
 g_variant_serialised_get_child (GVariantSerialised container,
                                 gsize              index)
 {
+  g_variant_serialised_assert_invariant (container);
+
   switch (g_variant_type_info_get_type_class (container.type))
   {
     case G_VARIANT_TYPE_CLASS_MAYBE:
@@ -870,6 +874,9 @@ g_variant_serialised_byteswap (GVariantSerialised value)
   else
     {
       gsize children, i;
+      
+      g_print ("was %d %d %s\n", alignment, fixed_size,
+               g_variant_type_peek_string (g_variant_type_info_get_type (value.type)));
 
       children = g_variant_serialised_n_children (value);
       for (i = 0; i < children; i++)

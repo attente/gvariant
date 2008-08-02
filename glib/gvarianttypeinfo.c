@@ -313,17 +313,20 @@ base_info_new (const GVariantTypeClass class)
     case G_VARIANT_TYPE_CLASS_INT16:
       info->alignment = 2 - 1;
       info->fixed_size = 2;
+      break;
 
     case G_VARIANT_TYPE_CLASS_UINT32:
     case G_VARIANT_TYPE_CLASS_INT32:
       info->alignment = 4 - 1;
       info->fixed_size = 4;
+      break;
 
     case G_VARIANT_TYPE_CLASS_UINT64:
     case G_VARIANT_TYPE_CLASS_INT64:
     case G_VARIANT_TYPE_CLASS_DOUBLE:
       info->alignment = 8 - 1;
       info->fixed_size = 8;
+      break;
 
     case G_VARIANT_TYPE_CLASS_VARIANT:
       info->alignment = 8 - 1;
