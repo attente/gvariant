@@ -331,6 +331,7 @@ g_variant_type_is_basic (const GVariantType *type)
     case 'u':
     case 't':
     case 'x':
+    case 'd':
     case 's':
     case 'o':
     case 'g':

@@ -202,7 +202,7 @@ random_markup_from_signature (GString     *markup,
           {
             const gchar *next = next_type_in_signature (signature);
 
-            g_string_append (markup, "<array signature='");
+            g_string_append (markup, "<array type='");
             g_string_append_len (markup, signature, next - signature);
             g_string_append (markup, "'/>");
 
@@ -262,7 +262,7 @@ random_markup_from_signature (GString     *markup,
           {
             const gchar *next = next_type_in_signature (signature);
 
-            g_string_append (markup, "<nothing signature='");
+            g_string_append (markup, "<nothing type='");
             g_string_append_len (markup, signature, next - signature);
             g_string_append (markup, "'/>");
 
