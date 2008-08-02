@@ -20,7 +20,7 @@
 
 struct test_case
 {
-  const char *signature;
+  const char *type;
   int size;
   const char *data;
   const char *markup;
@@ -74,8 +74,7 @@ test (gconstpointer data)
   GVariant *variant;
   GString *markup;
 
-  variant = g_variant_load (g_signature (tc->signature),
-                            tc->data, tc->size, 0);
+  variant = g_variant_load (G_VARIANT_TYPE (tc->type), tc->data, tc->size, 0);
   markup = g_variant_markup_print (variant, NULL, FALSE, 0, 0);
   g_variant_unref (variant);
 

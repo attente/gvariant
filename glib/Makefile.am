@@ -1,4 +1,4 @@
-SUBDIRS = . gvariant-tests
+SUBDIRS = . tests
 
 lib_LTLIBRARIES = libgvariant.la
 
@@ -8,9 +8,9 @@ AM_CFLAGS = -Wall -Wwrite-strings -Wmissing-prototypes \
 
 libgvariant_la_LIBADD = $(glib_LIBS)
 libgvariant_la_SOURCES = \
-	gsignature.c		\
-	gsvariant.c		\
-	gsvhelper.c		\
+	gvarianttype.c		\
+	gvarianttypeinfo.c	\
+	gvariant-serialiser.c	\
 	gvariant-core.c		\
 	gvariant-util.c		\
 	gvariant-valist.c	\
@@ -18,14 +18,13 @@ libgvariant_la_SOURCES = \
 
 glibincludedir = $(includedir)/glib-2.0/glib
 glibinclude_HEADERS = \
-	gsignature.h			\
-	gvariant-loadstore.h		\
+	gvarianttype.h		\
+	gvariant-loadstore.h	\
 	gvariant.h
 
 noinst_HEADERS = \
-	gsignature-iterate.h	\
-	gsvhelper.h		\
-	gsvariant.h		\
+	gvarianttypeinfo.h	\
+	gvariant-serialiser.h	\
 	gvariant-private.h
 
 pkgconfigdir = $(libdir)/pkgconfig

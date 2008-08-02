@@ -11,7 +11,7 @@
 #ifndef _gvariant_h_
 #define _gvariant_h_
 
-#include <glib/gsignature.h>
+#include <glib/gvarianttype.h>
 #include <glib/gstring.h>
 #include <glib/gmarkup.h>
 #include <glib/gerror.h>
@@ -21,6 +21,8 @@ typedef struct                  OPAQUE_TYPE__GVariant                   GVariant
 typedef struct                  OPAQUE_TYPE__GVariantIter               GVariantIter;
 typedef struct                  OPAQUE_TYPE__GVariantBuilder            GVariantBuilder;
 
+typedef guchar gbyte;
+
 struct OPAQUE_TYPE__GVariantIter
 {
   gpointer private[4];
@@ -28,45 +30,33 @@ struct OPAQUE_TYPE__GVariantIter
 
 #pragma GCC visibility push (default)
 
-GSignature                      g_variant_get_signature                 (GVariant             *value);
-gboolean                        g_variant_matches                       (GVariant             *value,
-                                                                         GSignature            pattern);
 GVariant                       *g_variant_ref                           (GVariant             *value);
-GVariant                       *g_variant_unref                         (GVariant             *value);
 GVariant                       *g_variant_ref_sink                      (GVariant             *value);
-
-GVariant                       *g_variant_vvnew                         (GSignature            signature,
-                                                                         va_list              *app);
-
-GVariant                       *g_variant_vnew                          (GSignature            signature,
-                                                                         va_list               ap);
-
-GVariant                       *g_variant_new_full                      (GSignature            signature,
-                                                                         ...);
-
-GVariant                       *g_variant_new                           (const gchar          *signature_string,
-                                                                         ...);
-
-void                            g_variant_vvget                         (GVariant             *value,
-                                                                         gboolean              free,
-                                                                         GSignature            signature,
-                                                                         va_list              *app);
-
-void                            g_variant_vget                          (GVariant             *value,
-                                                                         gboolean              free,
-                                                                         GSignature            signature,
-                                                                         va_list               ap);
-
-void                            g_variant_get_full                      (GVariant             *value,
-                                                                         gboolean              free,
-                                                                         GSignature            signature,
-                                                                         ...);
-
-void                            g_variant_get                           (GVariant             *value,
-                                                                         const gchar          *signature_string,
-                                                                         ...);
-
+void                            g_variant_unref                         (GVariant             *value);
 void                            g_variant_flatten                       (GVariant             *value);
+
+GVariantTypeClass               g_variant_get_type_class                (GVariant             *value);
+const GVariantType             *g_variant_get_type                      (GVariant             *value);
+const gchar                    *g_variant_get_type_string               (GVariant             *value);
+gboolean                        g_variant_is_fixed_size                 (GVariant             *value);
+gboolean                        g_variant_is_basic                      (GVariant             *value);
+gboolean                        g_variant_is_container                  (GVariant             *value);
+gboolean                        g_variant_matches                       (GVariant             *value,
+                                                                         const GVariantType   *pattern);
+
+/* varargs construct/deconstruct */
+GVariant                       *g_variant_new                           (const gchar          *format_string,
+                                                                         ...);
+void                            g_variant_get                           (GVariant             *value,
+                                                                         const gchar          *format_string,
+                                                                         ...);
+
+gboolean                        g_variant_format_string_scan            (const gchar         **format_string);
+GVariant                       *g_variant_new_va                        (const gchar         **format_string,
+                                                                         va_list              *app);
+void                            g_variant_get_va                        (GVariant             *value,
+                                                                         const gchar         **format_string,
+                                                                         va_list              *app);
 
 /* constructors */
 GVariant                       *g_variant_new_boolean                   (gboolean              boolean);
@@ -106,7 +96,7 @@ gsize                           g_variant_n_children                    (GVarian
 
 /* GVariantIter */
 gboolean                        g_variant_iterate                       (GVariantIter         *iter,
-                                                                         const gchar          *signature_string,
+                                                                         const gchar          *type_string,
                                                                          ...);
 GVariant                       *g_variant_iter_next                     (GVariantIter         *iter);
 gint                            g_variant_iter_init                     (GVariantIter         *iter,
@@ -117,22 +107,22 @@ void                            g_variant_iter_cancel                   (GVarian
 void                            g_variant_builder_add_value             (GVariantBuilder      *builder,
                                                                          GVariant             *value);
 void                            g_variant_builder_add                   (GVariantBuilder      *builder,
-                                                                         const gchar          *signature,
+                                                                         const gchar          *type_string,
                                                                          ...);
 GVariantBuilder                *g_variant_builder_open                  (GVariantBuilder      *parent,
-                                                                         GSignatureType        type,
-                                                                         GSignature            signature);
+                                                                         GVariantTypeClass     class,
+                                                                         const GVariantType   *type);
 GVariantBuilder                *g_variant_builder_close                 (GVariantBuilder      *child);
 gboolean                        g_variant_builder_check_add             (GVariantBuilder      *builder,
-                                                                         GSignatureType        type,
-                                                                         GSignature            signature,
+                                                                         GVariantTypeClass     class,
+                                                                         const GVariantType   *type,
                                                                          GError              **error);
 gboolean                        g_variant_builder_check_end             (GVariantBuilder      *builder,
                                                                          GError              **error);
-GVariantBuilder                *g_variant_builder_new                   (GSignatureType        type,
-                                                                         GSignature            signature);
+GVariantBuilder                *g_variant_builder_new                   (GVariantTypeClass     class,
+                                                                         const GVariantType   *type);
 GVariant                       *g_variant_builder_end                   (GVariantBuilder      *builder);
-void                            g_variant_builder_abort                 (GVariantBuilder      *builder);
+void                            g_variant_builder_cancel                (GVariantBuilder      *builder);
 
 /* markup printing/parsing */
 GString                        *g_variant_markup_print                  (GVariant             *value,
@@ -141,11 +131,11 @@ GString                        *g_variant_markup_print                  (GVarian
                                                                          gint                  indentation,
                                                                          gint                  tabstop);
 void                            g_variant_markup_parser_start_parse     (GMarkupParseContext  *context,
-                                                                         GSignature            signature);
-GVariant                        *g_variant_markup_parser_end_parse      (GMarkupParseContext  *context,
+                                                                         const GVariantType   *type);
+GVariant                       *g_variant_markup_parser_end_parse       (GMarkupParseContext  *context,
                                                                          GError              **error);
-GVariant                        *g_variant_markup_parse                 (const gchar          *string,
-                                                                         GSignature            signature,
+GVariant                       *g_variant_markup_parse                  (const gchar          *string,
+                                                                         const GVariantType   *type,
                                                                          GError              **error);
 
 #pragma GCC visibility pop
@@ -157,8 +147,8 @@ typedef enum
 {
   G_VARIANT_BUILDER_ERROR_TOO_MANY,
   G_VARIANT_BUILDER_ERROR_TOO_FEW,
-  G_VARIANT_BUILDER_ERROR_CANNOT_INFER,
-  G_VARIANT_BUILDER_ERROR_DOES_NOT_FIT
+  G_VARIANT_BUILDER_ERROR_INFER,
+  G_VARIANT_BUILDER_ERROR_TYPE
 } GVariantBuilderError;
 
 #endif /* _gvariant_h_ */

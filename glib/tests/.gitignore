@@ -1,8 +1,6 @@
 link-test
-gvariant-basic
-gvariant-complex
-gvariant-constructors
 gvariant-endian
 gvariant-markup
 gvariant-random
 gvariant-serialiser
+gvariant-varargs
