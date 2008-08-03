@@ -21,8 +21,6 @@ typedef struct                  OPAQUE_TYPE__GVariant                   GVariant
 typedef struct                  OPAQUE_TYPE__GVariantIter               GVariantIter;
 typedef struct                  OPAQUE_TYPE__GVariantBuilder            GVariantBuilder;
 
-typedef guchar gbyte;
-
 struct OPAQUE_TYPE__GVariantIter
 {
   gpointer private[4];

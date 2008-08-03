@@ -291,6 +291,7 @@ g_variant_valist_get (GVariant     *value,
   switch (**format_string)
   {
     simple_case ('b', boolean);
+typedef guchar gbyte;
     simple_case ('y', byte);
     simple_case ('n', int16);
     simple_case ('q', uint16);
