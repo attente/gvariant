@@ -179,7 +179,6 @@ g_variant_apply_flags (GVariant      *value,
 /**
  * g_variant_unref:
  * @value: a #GVariant
- * @returns: %NULL
  *
  * Decreases the reference count of @variant.  When its reference
  * count drops to 0, the memory used by the variant is freed.
@@ -589,7 +588,7 @@ g_variant_from_gvs (GVariantSerialised  gvs,
 
 /**
  * g_variant_get_child:
- * @container: a container #GVariant
+ * @value: a container #GVariant
  * @index: the index of the child to fetch
  * @returns: the child at the specified index
  *
@@ -604,36 +603,36 @@ g_variant_from_gvs (GVariantSerialised  gvs,
  * This function never fails.
  **/
 GVariant *
-g_variant_get_child (GVariant *container,
+g_variant_get_child (GVariant *value,
                      gsize     index)
 {
   GVariantSerialised gvs;
   GVariant *source;
   GVariant *child;
 
-  if (container->representation == G_VARIANT_TREE)
+  if (value->representation == G_VARIANT_TREE)
     {
-      g_variant_lock (container);
+      g_variant_lock (value);
 
-      if G_UNLIKELY (container->representation != G_VARIANT_TREE)
+      if G_UNLIKELY (value->representation != G_VARIANT_TREE)
         {
-          g_variant_unlock (container);
+          g_variant_unlock (value);
           goto not_a_tree;
         }
 
-      if G_LIKELY (index < container->contents.tree.n_children)
+      if G_LIKELY (index < value->contents.tree.n_children)
         {
-          child = g_variant_ref (container->contents.tree.children[index]);
-          g_variant_unlock (container);
+          child = g_variant_ref (value->contents.tree.children[index]);
+          g_variant_unlock (value);
           return child;
         }
 
       g_error ("Attempt to access item %d in a container with "
-               "only %d items", index, container->contents.tree.n_children);
+               "only %d items", index, value->contents.tree.n_children);
     }
 
  not_a_tree:
-  gvs = g_variant_get_gvs (container, &source);
+  gvs = g_variant_get_gvs (value, &source);
   gvs = g_variant_serialised_get_child (gvs, index);
 
   if (gvs.data == NULL)
@@ -673,7 +672,7 @@ g_variant_get_child (GVariant *container,
     }
   else
     /* no error */
-    child = g_variant_from_gvs (gvs, source, container->trusted);
+    child = g_variant_from_gvs (gvs, source, value->trusted);
 
   g_variant_unref (source);
 
@@ -684,7 +683,7 @@ g_variant_get_child (GVariant *container,
 
 /**
  * g_variant_n_children:
- * @container: a container #GVariant
+ * @value: a container #GVariant
  * @returns: the number of children in the container
  *
  * Determines the number of children in a container #GVariant
@@ -701,40 +700,40 @@ g_variant_get_child (GVariant *container,
  * TS
  **/
 gsize
-g_variant_n_children (GVariant *container)
+g_variant_n_children (GVariant *value)
 {
-  GVariantSerialised gvs = { container->type };
+  GVariantSerialised gvs = { value->type };
   GVariant *source;
   gsize n_children;
 
-  check (container);
+  check (value);
 
-  if (container->representation == G_VARIANT_TREE)
+  if (value->representation == G_VARIANT_TREE)
     {
       gsize n_children;
 
       /* if the ->representation is TREE we have to assume that it
        * might change at any time that we are unlocked.  be careful.
        */
-      g_variant_lock (container);
+      g_variant_lock (value);
 
-      if G_UNLIKELY (container->representation != G_VARIANT_TREE)
+      if G_UNLIKELY (value->representation != G_VARIANT_TREE)
       {
         /* it changed representation */
 
-        g_variant_unlock (container);
+        g_variant_unlock (value);
         goto not_a_tree;
       }
 
-      n_children = container->contents.tree.n_children;
+      n_children = value->contents.tree.n_children;
 
-      g_variant_unlock (container);
+      g_variant_unlock (value);
 
       return n_children;
     }
 
  not_a_tree:
-  gvs = g_variant_get_gvs (container, &source);
+  gvs = g_variant_get_gvs (value, &source);
   n_children = g_variant_serialised_n_children (gvs);
   g_variant_unref (source);
 

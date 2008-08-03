@@ -1,0 +1,7 @@
+<FUNCTION>
+<NAME>g_variant_type_new_struct</NAME>
+<RETURNS>GVariantType *</RETURNS>
+gconstpointer *items
+GVariantTypeGetter func
+gsize length
+</FUNCTION>

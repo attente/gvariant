@@ -670,6 +670,7 @@ GMarkupParser g_variant_markup_parser =
  *       ...
  *     }
  * }
+ * </programlisting>
  *
  * If @type is non-%NULL then it constrains the permissible types that
  * the root element may have.  It also serves to hint the parser about

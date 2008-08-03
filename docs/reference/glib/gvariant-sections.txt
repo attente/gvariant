@@ -170,7 +170,7 @@ g_variant_markup_parse_context_end
 </SECTION>
 
 <SECTION>
-<FILE>gvariant-loadstore</FILE>
+<FILE>GVariant-loadstore</FILE>
 GVariantFlags
 g_variant_store
 g_variant_get_data
@@ -178,5 +178,4 @@ g_variant_get_size
 g_variant_load
 g_variant_from_slice
 g_variant_normalise
-g_variant_flatten
 </SECTION>

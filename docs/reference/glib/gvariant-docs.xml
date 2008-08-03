@@ -10,7 +10,7 @@
     <title>GVariant</title>
     <xi:include href="xml/GVariantTypeClass.xml"/>
     <xi:include href="xml/GVariantType.xml"/>
-    <xi:include href="xml/gvariant.xml"/>
-    <xi:include href="xml/gvariant-loadstore.xml"/>
+    <xi:include href="xml/GVariant.xml"/>
+    <xi:include href="xml/GVariant-loadstore.xml"/>
   </chapter>
 </book>

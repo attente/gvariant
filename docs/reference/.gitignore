@@ -9,7 +9,6 @@ xml
 *.txt.bak
 *-decl-list.txt
 *-decl.txt
-*-overrides.txt
 *-undocumented.txt
 *-undeclared.txt
 *-unused.txt

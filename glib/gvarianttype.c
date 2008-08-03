@@ -676,7 +676,7 @@ g_variant_type_first (const GVariantType *type)
 /**
  * g_variant_type_next:
  * @type: a #GVariantType
- * @return: the next #GVariantType after @type, or %NULL
+ * @returns: the next #GVariantType after @type, or %NULL
  *
  * Determines the next item type of a structure or dictionary entry
  * type.
