@@ -142,8 +142,9 @@ g_variant_get_fixed_array
 <SUBSECTION>
 GVariantIter
 g_variant_iter_init
-g_variant_iter_cancel
 g_variant_iter_next
+g_variant_iter_cancel
+g_variant_iter_was_cancelled
 g_variant_iterate
 
 <SUBSECTION>

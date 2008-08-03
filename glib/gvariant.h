@@ -23,7 +23,7 @@ typedef struct                  OPAQUE_TYPE__GVariantBuilder            GVariant
 
 struct OPAQUE_TYPE__GVariantIter
 {
-  gpointer private[4];
+  gpointer private[8];
 };
 
 #pragma GCC visibility push (default)
@@ -94,13 +94,14 @@ GVariant                       *g_variant_get_child                     (GVarian
 gsize                           g_variant_n_children                    (GVariant             *value);
 
 /* GVariantIter */
+gsize                           g_variant_iter_init                     (GVariantIter         *iter,
+                                                                         GVariant             *value);
+GVariant                       *g_variant_iter_next                     (GVariantIter         *iter);
+void                            g_variant_iter_cancel                   (GVariantIter         *iter);
+gboolean                        g_variant_iter_was_cancelled            (GVariantIter         *iter);
 gboolean                        g_variant_iterate                       (GVariantIter         *iter,
                                                                          const gchar          *type_string,
                                                                          ...);
-GVariant                       *g_variant_iter_next                     (GVariantIter         *iter);
-gint                            g_variant_iter_init                     (GVariantIter         *iter,
-                                                                         GVariant             *value);
-void                            g_variant_iter_cancel                   (GVariantIter         *iter);
 
 /* GVariantBuilder */
 void                            g_variant_builder_add_value             (GVariantBuilder      *builder,

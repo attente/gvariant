@@ -16,52 +16,35 @@
 typedef struct
 {
   GVariant *value;
-  int length;
-  int offset;
+  GVariant *child;
+  gsize length;
+  gsize offset;
+  gboolean cancelled;
 } GVariantIterReal;
-
-/**
- * g_variant_iter_cancel:
- * @iter: a #GVariantIter
- *
- * Causes @iter to drop its reference to the
- * container that it was created with.  You need
- * to call cell this on an iter if for some reason
- * you stopped iterating before reaching the end.
- *
- * You do not need to call this in the normal case
- * of visiting all of the elements.  In this case,
- * the reference will be automatically dropped by
- * g_variant_iter_next() just before it returns
- * %NULL.
- **/
-
-void
-g_variant_iter_cancel (GVariantIter *iter)
-{
-  GVariantIterReal *real = (GVariantIterReal *) iter;
-
-  g_variant_unref (real->value);
-  real->value = NULL;
-}
 
 /**
  * g_variant_iter_init:
  * @iter: a #GVariantIter
+ * @value: a container #GVariant instance
+ * @returns: the number of items in the container
  *
- * Initialises the fields of a #GVariantIter and
- * prepare to iterate over the contents of @value.
+ * Initialises the fields of a #GVariantIter and perpare to iterate
+ * over the contents of @value.
  *
- * @iter is allowed to be completely uninitialised
- * prior to this call; it does not, for example,
- * have to be cleared to zeros.
+ * @iter is allowed to be completely uninitialised prior to this call;
+ * it does not, for example, have to be cleared to zeros.  For this
+ * reason, if @iter was already being used, you should first cancel it
+ * with g_variant_iter_cancel().
  *
- * After this call, @iter holds a reference to
- * @value.  The reference will only be dropped
- * once all values have been iterated over or by
- * calling g_variant_iter_cancel().
+ * After this call, @iter holds a reference to @value.  The reference
+ * will be automatically dropped once all values have been iterated
+ * over or manually by calling g_variant_iter_cancel().
+ *
+ * This function returns the number of times that
+ * g_variant_iter_next() will return non-%NULL.  You're not expected to
+ * use this value, but it's there incase you wanted to know.
  **/
-gint
+gsize
 g_variant_iter_init (GVariantIter *iter,
                      GVariant     *value)
 {
@@ -69,8 +52,10 @@ g_variant_iter_init (GVariantIter *iter,
 
   g_assert (sizeof (GVariantIterReal) <= sizeof (GVariantIter));
 
+  real->cancelled = FALSE;
   real->length = g_variant_n_children (value);
   real->offset = 0;
+  real->child = NULL;
 
   if (real->length)
     real->value = g_variant_ref (value);
@@ -85,21 +70,34 @@ g_variant_iter_init (GVariantIter *iter,
  * @iter: a #GVariantIter
  * @returns: a #GVariant for the next child
  *
- * Retreives the next child value from @iter.  In
- * the event that no more child values exist,
- * %NULL is returned and @iter drops its reference
- * to the value that it was created with.
+ * Retreives the next child value from @iter.  In the event that no
+ * more child values exist, %NULL is returned and @iter drops its
+ * reference to the value that it was created with.
+ *
+ * The return value of this function is internally cached by the
+ * @iter, so you don't have to unref it when you're done.  For this
+ * reason, thought, it is important to ensure that you call
+ * g_variant_iter_next() one last time, even if you know the number of
+ * items in the container.
+ *
+ * It is permissable to call this function on a cancelled iter, in
+ * which case %NULL is returned and nothing else happens.
  **/
 GVariant *
 g_variant_iter_next (GVariantIter *iter)
 {
   GVariantIterReal *real = (GVariantIterReal *) iter;
-  GVariant *value;
+
+  if (real->child)
+    {
+      g_variant_unref (real->child);
+      real->child = NULL;
+    }
 
   if (real->value == NULL)
     return NULL;
 
-  value = g_variant_get_child (real->value, real->offset++);
+  real->value = g_variant_get_child (real->value, real->offset++);
 
   if (real->offset == real->length)
     {
@@ -107,7 +105,58 @@ g_variant_iter_next (GVariantIter *iter)
       real->value = NULL;
     }
 
-  return value;
+  return real->value;
+}
+
+/**
+ * g_variant_iter_cancel:
+ * @iter: a #GVariantIter
+ *
+ * Causes @iter to drop its reference to the container that it was
+ * created with.  You need to call this on an iter if, for some
+ * reason, you stopped iterating before reading the end.
+ *
+ * You do not need to call this in the normal case of visiting all of
+ * the elements.  In this case, the reference will be automatically
+ * dropped by g_variant_iter_ntext() just before it returns %NULL.
+ *
+ * It is permissable to call this function more than once on the same
+ * iter.  It is permissable to call this function after the last
+ * value.
+ **/
+void
+g_variant_iter_cancel (GVariantIter *iter)
+{
+  GVariantIterReal *real = (GVariantIterReal *) iter;
+
+  real->cancelled = TRUE;
+
+  if (real->value)
+    {
+      g_variant_unref (real->value);
+      real->value = NULL;
+    }
+
+  if (real->child)
+    {
+      g_variant_unref (real->child);
+      real->child = NULL;
+    }
+}
+
+/**
+ * g_variant_iter_was_cancelled:
+ * @iter: a #GVariantIter
+ * @returns: %TRUE if g_variant_iter_cancel() was called
+ *
+ * Determines if g_variant_iter_cancel() was called on @iter.
+ **/
+gboolean
+g_variant_iter_was_cancelled (GVariantIter *iter)
+{
+  GVariantIterReal *real = (GVariantIterReal *) iter;
+
+  return real->cancelled;
 }
 
 /**
