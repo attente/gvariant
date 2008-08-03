@@ -39,7 +39,7 @@ g_variant_type_check (const GVariantType *type)
  *
  * If there is no valid type string starting at @type_string, or if
  * the type string does not end before @limit then %FALSE is returned
- * and the state of @type_string is undefined.
+ * and the state of the @type_string pointer is undefined.
  *
  * For the simple case of checking if a string is a valid type string,
  * see g_variant_type_string_is_valid().
@@ -479,7 +479,7 @@ g_variant_type_matches (const GVariantType *type,
         {
           const GVariantType *target_type = G_VARIANT_TYPE (type_string);
 
-          if (!g_variant_type_is_of_class (target_type, pattern_char))
+          if (!g_variant_type_is_in_class (target_type, pattern_char))
             return FALSE;
 
           type_string += g_variant_type_get_string_length (target_type);
@@ -489,8 +489,20 @@ g_variant_type_matches (const GVariantType *type,
   return TRUE;
 }
 
+/**
+ * g_variant_type_is_in_class:
+ * @type: a #GVariantType
+ * @class: a #GVariantTypeClass
+ * @returns: %TRUE if @type is of the given @class
+ *
+ * Determines if @type is contained within @class.
+ *
+ * Note that the class %G_VARIANT_TYPE_CLASS_ALL contains every type
+ * and the class %G_VARIANT_TYPE_CLASS_BASIC contains every basic
+ * type.
+ **/
 gboolean
-g_variant_type_is_of_class (const GVariantType *type,
+g_variant_type_is_in_class (const GVariantType *type,
                             GVariantTypeClass   class)
 {
   char first_char = *(const gchar *) type;
@@ -503,11 +515,28 @@ g_variant_type_is_of_class (const GVariantType *type,
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       return first_char == '{';
 
+    case G_VARIANT_TYPE_CLASS_BASIC:
+      return g_variant_type_is_basic (type);
+
+    case G_VARIANT_TYPE_CLASS_ALL:
+      return TRUE;
+
     default:
       return class == first_char;
   }
 }
 
+/**
+ * g_variant_type_get_class:
+ * @type: a #GVariantType
+ * @returns: the smallest class containing @type
+ *
+ * Determines the smallest type class containing @type.
+ *
+ * For example, although %G_VARIANT_TYPE_CLASS_ALL matches all types,
+ * it will never be returned by this function except for the type
+ * %G_VARIANT_TYPE_ANY.
+ **/
 GVariantTypeClass
 g_variant_type_get_class (const GVariantType *type)
 {
@@ -590,6 +619,16 @@ g_variant_type_class_is_basic (GVariantTypeClass class)
   }
 }
 
+/**
+ * g_variant_type_element:
+ * @type: a #GVariantType of class array or maybe
+ * @returns: the element type of @type
+ *
+ * Determines the element type of an array or maybe type.
+ *
+ * This function must be called with a type in one of the classes
+ * %G_VARIANT_TYPE_CLASS_MAYBE or %G_VARIANT_TYPE_CLASS_ARRAY.
+ **/
 const GVariantType *
 g_variant_type_element (const GVariantType *type)
 {
@@ -600,6 +639,27 @@ g_variant_type_element (const GVariantType *type)
   return (const GVariantType *) &type_string[1];
 }
 
+/**
+ * g_variant_type_first:
+ * @type: a #GVariantType of class struct or dict entry
+ * @returns: the first item type of @type, or %NULL
+ *
+ * Determines the first item type of a structure or dictionary entry
+ * type.
+ *
+ * This function must be called with a type in one of the classes
+ * %G_VARIANT_TYPE_CLASS_STRUCT or %G_VARIANT_TYPE_CLASS_DICT_ENTRY
+ * but must not be called on the generic structure type
+ * %G_VARIANT_TYPE_ANY_STRUCT.
+ *
+ * In the case of a dictionary entry type, this returns the type of
+ * the key.
+ *
+ * %NULL is returned in case of @type being %G_VARIANT_TYPE_UNIT.
+ *
+ * This call, together with g_variant_type_next() provides an iterator
+ * interface over structure and dictionary entry types.
+ **/
 const GVariantType *
 g_variant_type_first (const GVariantType *type)
 {
@@ -613,6 +673,24 @@ g_variant_type_first (const GVariantType *type)
   return (const GVariantType *) &type_string[1];
 }
 
+/**
+ * g_variant_type_next:
+ * @type: a #GVariantType
+ * @return: the next #GVariantType after @type, or %NULL
+ *
+ * Determines the next item type of a structure or dictionary entry
+ * type.
+ *
+ * @type must be the result of a previous call to
+ * g_variant_type_first().  Together, these two functions provide an
+ * iterator interface over structure and dictioanry entry types.
+ *
+ * If called on the key type of a dictionary entry then this call
+ * returns the value type.
+ *
+ * %NULL is returned when @type is the last item in a structure or the
+ * value type of a dictionary entry.
+ **/
 const GVariantType *
 g_variant_type_next (const GVariantType *type)
 {
@@ -626,6 +704,22 @@ g_variant_type_next (const GVariantType *type)
   return (const GVariantType *) type_string;
 }
 
+/**
+ * g_variant_type_n_items:
+ * @type: a #GVariantType of class struct or dict entry
+ * @returns: the number of items in @type
+ *
+ * Determines the number of items contained in a structure or
+ * dictionary entry type.
+ *
+ * This function must be called with a type in one of the classes
+ * %G_VARIANT_TYPE_CLASS_STRUCT or %G_VARIANT_TYPE_CLASS_DICT_ENTRY
+ * but must not be called on the generic structure type
+ * %G_VARIANT_TYPE_ANY_STRUCT.
+ *
+ * In the case of a dictionary entry type, this function will always
+ * return 2.
+ **/
 gsize
 g_variant_type_n_items (const GVariantType *type)
 {
@@ -639,6 +733,17 @@ g_variant_type_n_items (const GVariantType *type)
   return count;
 }
 
+/**
+ * g_variant_type_key:
+ * @type: a #GVariantType of class dict entry
+ * @returns: the key type of the dictionary entry
+ *
+ * Determines the key type of a dictionary entry type.
+ *
+ * This function must be called with a type in the class
+ * %G_VARIANT_TYPE_CLASS_DICT_ENTRY.  Other than that, this call is
+ * exactly equivalent to g_variant_type_first().
+ **/
 const GVariantType *
 g_variant_type_key (const GVariantType *type)
 {
@@ -649,12 +754,47 @@ g_variant_type_key (const GVariantType *type)
   return (const GVariantType *) &type_string[1];
 }
 
+/**
+ * g_variant_type_value:
+ * @type: a #GVariantType of class dict entry
+ * @returns: the value type of the dictionary entry
+ *
+ * Determines the value type of a dictionary entry type.
+ *
+ * This function must be called with a type in the class
+ * %G_VARIANT_TYPE_CLASS_DICT_ENTRY.
+ **/
 const GVariantType *
 g_variant_type_value (const GVariantType *type)
 {
+  const gchar *type_string = g_variant_type_peek_string (type);
+
+  g_assert (type_string[0] == '{');
+
   return g_variant_type_next (g_variant_type_key (type));
 }
 
+/**
+ * g_variant_type_new_struct:
+ * @items: an array of items, one for each item
+ * @func: a function to determine each item type
+ * @length: the length of @items
+ * @returns: a new #GVariantType
+ *
+ * Constructs a new structure type.
+ *
+ * The item types for the structure type may be provided directly (as
+ * an array of #GVariantType), in which case @func should be %NULL.
+ *
+ * The item types can also be provided indirectly.  In this case,
+ * @items should be an array of pointers which are passed one at a
+ * time to @func to determine the corresponding #GVariantType.  For
+ * example, you might provide an array of #GVariant pointers for
+ * @items and g_variant_get_type() for @func.
+ *
+ * The result of this function must be free'd with a call to
+ * g_variant_type_free().
+ **/
 GVariantType *
 _g_variant_type_new_struct (const gpointer     *items,
                             GVariantTypeGetter  func,
@@ -702,6 +842,17 @@ _g_variant_type_new_struct (const gpointer     *items,
   return g_memdup (buffer, offset);
 }
 
+/**
+ * g_variant_type_new_array:
+ * @element: a #GVariantType
+ * @returns: a new array #GVariantType
+ *
+ * Constructs the type corresponding to an array of elements of the
+ * type @type.
+ *
+ * The result of this function must be free'd with a call to
+ * g_variant_type_free().
+ **/
 GVariantType *
 g_variant_type_new_array (const GVariantType *element)
 {
@@ -721,6 +872,17 @@ g_variant_type_new_array (const GVariantType *element)
   return (GVariantType *) new;
 }
 
+/**
+ * g_variant_type_new_maybe:
+ * @element: a #GVariantType
+ * @returns: a new maybe #GVariantType
+ *
+ * Constructs the type corresponding to a maybe instance containing
+ * type @type.
+ *
+ * The result of this function must be free'd with a call to
+ * g_variant_type_free().
+ **/
 GVariantType *
 g_variant_type_new_maybe (const GVariantType *element)
 {
@@ -740,6 +902,17 @@ g_variant_type_new_maybe (const GVariantType *element)
   return (GVariantType *) new;
 }
 
+/**
+ * g_variant_type_new_dict_entry:
+ * @key: a basic #GVariantType
+ * @value: a #GVariantType
+ *
+ * Constructs the type corresponding to a dictionary entry with a key
+ * of type @key and a value of type @value.
+ *
+ * The result of this function must be free'd with a call to
+ * g_variant_type_free().
+ **/
 GVariantType *
 g_variant_type_new_dict_entry (const GVariantType *key,
                                const GVariantType *value)

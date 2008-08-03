@@ -538,7 +538,7 @@ g_variant_builder_new (GVariantTypeClass   class,
 
   g_assert (type == NULL || g_variant_type_is_concrete (type));
   g_assert (class == G_VARIANT_TYPE_CLASS_VARIANT ||
-            type == NULL || g_variant_type_is_of_class (type, class));
+            type == NULL || g_variant_type_is_in_class (type, class));
 
   builder = g_slice_new (GVariantBuilder);
   builder->parent = NULL;
@@ -759,7 +759,7 @@ g_variant_builder_check_add (GVariantBuilder     *builder,
   /* we now know that class is the natural class of a concrete type */
 
   if (builder->expected &&
-      !g_variant_type_is_of_class (builder->expected, class))
+      !g_variant_type_is_in_class (builder->expected, class))
     {
       g_set_error (error, G_VARIANT_BUILDER_ERROR,
                    G_VARIANT_BUILDER_ERROR_TYPE,

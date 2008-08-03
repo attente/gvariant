@@ -36,7 +36,7 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * @G_VARIANT_TYPE_CLASS_STRUCT: the class containing all structure types
  * @G_VARIANT_TYPE_CLASS_DICT_ENTRY: the class containing all dictionary entry types
  * @G_VARIANT_TYPE_CLASS_BASIC: the class containing all of the basic types (including %G_VARIANT_TYPE_ANY_BASIC and anything that matches it).
- * @G_VARIANT_TYPE_CLASS_ALL: the class containing all types %G_VARIANT_TYPE_ANY (including %G_VARIANT_TYPE_ANY and anything that matches it).
+ * @G_VARIANT_TYPE_CLASS_ALL: the class containing all types (including %G_VARIANT_TYPE_ANY and anything that matches it).
  *
  * A enumerated type to group #GVariantType instances into classes.
  *
@@ -45,7 +45,7 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * statement over the #GVariantTypeClass of the type and its component
  * sub-types.
  *
- * A #GVariantType is said to "be of" a given #GVariantTypeClass.  The
+ * A #GVariantType is said to "be in" a given #GVariantTypeClass.  The
  * type classes are overlapping, so a given #GVariantType may have
  * more than one type class.  For example, %G_VARIANT_TYPE_BOOLEAN is
  * of the following classes: %G_VARIANT_TYPE_CLASS_BOOLEAN,
@@ -280,7 +280,7 @@ gboolean                        g_variant_type_matches                  (const G
                                                                          const GVariantType  *pattern);
 
 /* class functions */
-gboolean                        g_variant_type_is_of_class              (const GVariantType  *type,
+gboolean                        g_variant_type_is_in_class              (const GVariantType  *type,
                                                                          GVariantTypeClass    class);
 GVariantTypeClass               g_variant_type_get_class                (const GVariantType  *type);
 gboolean                        g_variant_type_class_is_container       (GVariantTypeClass    class);
@@ -319,8 +319,8 @@ const GVariantType             *_g_variant_type_check_string            (const g
 #define G_VARIANT_TYPE(type_string) \
   (_g_variant_type_check_string (type_string))
 
-#define g_variant_type_new_struct(array, func, length) \
-  (_g_variant_type_new_struct ((const gpointer *) array, (GVariantTypeGetter) (1 ? func : \
-                               (const GVariantType *(*)(typeof (array[0]))) NULL), length))
+#define g_variant_type_new_struct(items, func, length) \
+  (_g_variant_type_new_struct ((const gpointer *) items, (GVariantTypeGetter) (1 ? func : \
+                               (const GVariantType *(*)(typeof (items[0]))) NULL), length))
 
 #endif /* _gvarianttype_h_ */

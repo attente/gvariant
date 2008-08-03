@@ -164,7 +164,7 @@ struct_info_new (const GVariantType *type)
   info = g_slice_new (StructInfo);
   info->self.info_class = STRUCT_INFO_CLASS;
 
-  if (!g_variant_type_is_of_class (type, G_VARIANT_TYPE_CLASS_DICT_ENTRY))
+  if (!g_variant_type_is_in_class (type, G_VARIANT_TYPE_CLASS_DICT_ENTRY))
     info->n_members = g_variant_type_n_items (type);
   else
     info->n_members = 2;

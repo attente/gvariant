@@ -46,6 +46,7 @@ g_variant_type_peek_string
 g_variant_type_dup_string
 
 <SUBSECTION>
+g_variant_type_is_in_class
 g_variant_type_is_concrete
 g_variant_type_is_container
 g_variant_type_is_basic
