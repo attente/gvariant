@@ -359,7 +359,6 @@ g_variant_serialised_get_child (GVariantSerialised container,
                             size * (index + 1) > container.size)
               break;
 
-            //g_print ("%p fixed (%d) -> %d and %d\n", signature, index, size * index, size * (index + 1));
             return g_variant_serialiser_sub (container, type,
                                              size * index, size * (index + 1));
           }
@@ -472,7 +471,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
         /* separator byte */
         container.data[child.size] = '\0';
 
-        /* the signature */
+        /* the type */
         memcpy (&container.data[child.size + 1],
                 g_variant_type_info_get_type (child.type),
                 container.size - child.size - 1);

@@ -176,9 +176,9 @@ typedef enum
  * The type of a DBus type signature.  These are strings of a specific
  * format used as type signatures for DBus methods and messages.
  *
- * Any valid #const GVariantType * signature string is a valid DBus type
+ * Any valid #GVariantType signature string is a valid DBus type
  * signature.  In addition, a concatenation of any number of valid
- * #const GVariantType * signature strings is also a valid DBus type
+ * #GVariantType  signature strings is also a valid DBus type
  * signature.
  **/
 #define G_VARIANT_TYPE_SIGNATURE            ((const GVariantType *) "g")

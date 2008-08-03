@@ -113,12 +113,12 @@ g_variant_iter_next (GVariantIter *iter)
 /**
  * g_variant_matches:
  * @value: a #GVariant instance
- * @pattern: a possibly abstract #GSignature
+ * @pattern: a possibly abstract #GVariantType
  * @returns: %TRUE if the type of @value matches @pattern
  *
  * Checks if a value has a type matching the provided pattern.  This
- * call is equivalent to calling g_variant_get_signature() then
- * g_signature_matches().
+ * call is equivalent to calling g_variant_get_type() then
+ * g_variant_type_matches().
  **/
 gboolean
 g_variant_matches (GVariant           *value,
@@ -682,7 +682,7 @@ g_variant_builder_check_end (GVariantBuilder     *builder,
       if (builder->type == NULL && builder->offset == 0)
         {
           g_set_error (error, 0, 0,
-                       "unable to infer signature for maybe with no value");
+                       "unable to infer type for maybe with no value");
           return FALSE;
         }
       break;

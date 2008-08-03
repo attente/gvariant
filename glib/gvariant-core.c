@@ -12,7 +12,7 @@
  * SECTION: gvariant
  * @title: GVariant
  * @short_description: a general purpose variant datatype
- * @see_also: gsignature
+ * @see_also: GVariantType
  *
  * #GVariant is a variant datatype; it stores a value along with
  * information about the type of that value.  The range of possible
@@ -191,7 +191,7 @@ g_variant_unref (GVariant *value)
 
   if (g_atomic_int_dec_and_test (&value->ref_count))
     {
-      /* free the signature */
+      /* free the type info */
       g_variant_type_info_unref (value->type);
 
       /* free the data */
@@ -370,7 +370,7 @@ g_variant_new_small (const GVariantType *type,
 
 /**
  * g_variant_from_slice:
- * @signature: the #GSignature of the new variant
+ * @type: the #GVariantType of the new variant
  * @slice: a pointer to a GSlice-allocated region
  * @size: the size of @slice
  * @flags: zero or more #GVariantLoadFlags
@@ -695,7 +695,7 @@ g_variant_get_child (GVariant *container,
  * For variants, the return value is always 1.  For maybes, it is
  * always zero or one.  For arrays, it is the length of the array.
  * For structures it is the number of structure items (which depends
- * only on the signature).  For dictionary entries, it is always 2.
+ * only on the type).  For dictionary entries, it is always 2.
  *
  * This function never fails.
  * TS
@@ -742,13 +742,11 @@ g_variant_n_children (GVariant *container)
 }
 
 /**
- * g_variant_get_signature:
+ * g_variant_get_type:
  * @value: a #GVariant
- * @returns: a #GSignature
+ * @returns: a #GVariantType
  *
- * Determines the signature of @value.  This is not the function to
- * access the contents of a signature #GVariant instance -- use
- * g_variant_get_string() for that.
+ * Determines the type of @value.
  *
  * The return value is valid for the lifetime of @value and must not
  * be freed.
@@ -872,7 +870,7 @@ g_variant_ensure_native_endian (GVariant *value)
 
 /**
  * g_variant_load:
- * @signature: the #GSignature of the new variant
+ * @type: the #GVariantType of the new variant
  * @data: the serialised #GVariant data to load
  * @size: the size of @data
  * @flags: zero or more #GVariantLoadFlags

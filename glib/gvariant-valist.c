@@ -682,12 +682,12 @@ g_variant_get_va (GVariant     *value,
 /**
  * g_variant_iterate:
  * @iter: a #GVariantIter
- * @signature_string: a #GSignature string
+ * @type_string: a #GVaraintType string
  * @returns: %TRUE if a child was fetched or
  *   %FALSE if no children remain.
  *
  * Retreives the next child value from @iter and
- * deconstructs it according to @signature_string.
+ * deconstructs it according to @type_string.
  *
  * This call is essentially equivalent to
  * g_variant_iter_next() and g_variant_get().  On
