@@ -86,7 +86,7 @@ check_verbatim (gconstpointer data)
   GVariant *value;
   GString *out;
 
-  value = g_variant_markup_parse (markup, NULL, &error);
+  value = g_variant_markup_parse (markup, -1, NULL, &error);
 
   if (value == NULL)
     {

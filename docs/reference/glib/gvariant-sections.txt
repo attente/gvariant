@@ -73,7 +73,7 @@ g_variant_type_new_dict_entry
 </SECTION>
 
 <SECTION>
-<FILE>gvariant</FILE>
+<FILE>GVariant</FILE>
 <SUBSECTION>
 GVariant
 g_variant_new
@@ -81,9 +81,23 @@ g_variant_get
 
 <SUBSECTION>
 g_variant_ref
+g_variant_ref_sink
 g_variant_unref
-g_variant_get_signature
+g_variant_flatten
+
+<SUBSECTION>
+g_variant_get_type_class
+g_variant_get_type
+g_variant_get_type_string
+g_varaint_is_fixed_size
+g_variant_is_basic
+g_variant_is_container
 g_variant_matches
+
+<SUBSECTION>
+g_variant_format_string_scan
+g_variant_new_va
+g_variant_get_va
 
 <SUBSECTION>
 g_variant_new_boolean
@@ -117,6 +131,7 @@ g_variant_get_variant
 <SUBSECTION>
 g_variant_n_children
 g_variant_get_child
+g_variant_get_fixed
 g_variant_get_fixed_array
 
 <SUBSECTION>
@@ -127,16 +142,10 @@ g_variant_iter_next
 g_variant_iterate
 
 <SUBSECTION>
-g_variant_markup_parse
-g_variant_markup_parser_start_parse
-g_variant_markup_parser_end_parse
-g_variant_markup_print
-
-<SUBSECTION>
 GVariantBuilder
 G_VARIANT_BUILDER_ERROR
 GVariantBuilderError
-g_variant_builder_abort
+g_variant_builder_cancel
 g_variant_builder_add
 g_variant_builder_add_value
 g_variant_builder_check_add
@@ -147,13 +156,12 @@ g_variant_builder_new
 g_variant_builder_open
 
 <SUBSECTION>
-va_ref
-g_variant_vvnew
-g_variant_vnew
-g_variant_new_full
-g_variant_vvget
-g_variant_vget
-g_variant_get_full
+g_variant_markup_print
+g_variant_markup_parse
+g_variant_markup_parser_push
+g_variant_markup_parser_pop
+g_variant_markup_parse_context_new
+g_variant_markup_parse_context_end
 </SECTION>
 
 <SECTION>

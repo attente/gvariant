@@ -88,6 +88,7 @@ const gchar                    *g_variant_get_string                    (GVarian
 gchar                          *g_variant_dup_string                    (GVariant             *value,
                                                                          gsize                *length);
 GVariant                       *g_variant_get_variant                   (GVariant             *value);
+gconstpointer                   g_variant_get_fixed                     (GVariant             *value);
 gconstpointer                   g_variant_get_fixed_array               (GVariant             *value,
                                                                          gsize                *n_items);
 GVariant                       *g_variant_get_child                     (GVariant             *value,
@@ -130,11 +131,16 @@ GString                        *g_variant_markup_print                  (GVarian
                                                                          gboolean              newlines,
                                                                          gint                  indentation,
                                                                          gint                  tabstop);
-void                            g_variant_markup_parser_start_parse     (GMarkupParseContext  *context,
+void                            g_variant_markup_subparser_start        (GMarkupParseContext  *context,
                                                                          const GVariantType   *type);
-GVariant                       *g_variant_markup_parser_end_parse       (GMarkupParseContext  *context,
+GVariant                       *g_variant_markup_subparser_end          (GMarkupParseContext  *context,
                                                                          GError              **error);
-GVariant                       *g_variant_markup_parse                  (const gchar          *string,
+GMarkupParseContext            *g_variant_markup_parse_context_new      (GMarkupParseFlags     flags,
+                                                                         const GVariantType   *type);
+GVariant                       *g_variant_markup_parse_context_end      (GMarkupParseContext  *context,
+                                                                         GError              **error);
+GVariant                       *g_variant_markup_parse                  (const gchar          *text,
+                                                                         gssize                text_len,
                                                                          const GVariantType   *type,
                                                                          GError              **error);
 

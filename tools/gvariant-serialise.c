@@ -7,7 +7,6 @@
 int
 main (int argc, char **argv)
 {
-  static const GMarkupParser null_parser;
   GMarkupParseContext *context;
   GError *error = NULL;
   FILE *file = stdin;
@@ -18,10 +17,8 @@ main (int argc, char **argv)
   gsize size;
   gint i = 1;
 
-  context = g_markup_parse_context_new (&null_parser,
-                                        G_MARKUP_PREFIX_ERROR_POSITION,
-                                        NULL, NULL);
-  g_variant_markup_parser_start_parse (context, NULL);
+  context = g_variant_markup_parse_context_new (G_MARKUP_PREFIX_ERROR_POSITION,
+                                                NULL);
 
   raw = FALSE;
 
@@ -56,13 +53,8 @@ main (int argc, char **argv)
     }
   while (++i < argc);
 
-  if (!g_markup_parse_context_end_parse (context, &error))
-    g_error ("error at eof: %s", error->message);
-
-  if (!(value = g_variant_markup_parser_end_parse (context, &error)))
+  if (!(value = g_variant_markup_parse_context_end (context, &error)))
     g_error ("value error: %s", error->message);
-
-  g_markup_parse_context_free (context);
 
   data = g_variant_get_data (value);
   size = g_variant_get_size (value);
