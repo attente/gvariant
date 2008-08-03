@@ -294,13 +294,6 @@ gsize                           g_variant_type_n_items                  (const G
 const GVariantType             *g_variant_type_key                      (const GVariantType  *type);
 const GVariantType             *g_variant_type_value                    (const GVariantType  *type);
 
-/* printf/scanf style */
-GVariantType                   *g_variant_type_construct                (const GVariantType  *pattern,
-                                                                         ...);
-gboolean                        g_variant_type_destruct                 (const GVariantType  *type,
-                                                                         const GVariantType  *pattern,
-                                                                         ...);
-
 /* constructors */
 GVariantType                   *g_variant_type_new_array                (const GVariantType  *element);
 GVariantType                   *g_variant_type_new_maybe                (const GVariantType  *element);
