@@ -35,8 +35,8 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * @G_VARIANT_TYPE_CLASS_ARRAY: the class containing all array types
  * @G_VARIANT_TYPE_CLASS_STRUCT: the class containing all structure types
  * @G_VARIANT_TYPE_CLASS_DICT_ENTRY: the class containing all dictionary entry types
- * @G_VARIANT_TYPE_CLASS_ANY: the class containing the type %G_VARIANT_TYPE_ANY
- * @G_VARIANT_TYPE_CLASS_ANY_BASIC: the class containing the type %G_VARIANT_TYPE_ANY_BASIC
+ * @G_VARIANT_TYPE_CLASS_BASIC: the class containing all of the basic types (including %G_VARIANT_TYPE_ANY_BASIC and anything that matches it).
+ * @G_VARIANT_TYPE_CLASS_ALL: the class containing all types %G_VARIANT_TYPE_ANY (including %G_VARIANT_TYPE_ANY and anything that matches it).
  *
  * A enumerated type to group #GVariantType instances into classes.
  *
@@ -45,24 +45,11 @@ typedef struct   OPAQUE_TYPE_GVariantType   GVariantType;
  * statement over the #GVariantTypeClass of the type and its component
  * sub-types.
  *
- * A #GVariantType is said to "have" a given #GVariantTypeClass.  The
- * type classes are non-overlapping, so a given #GVariantType can only
- * have a single type class.
- * #GVariantType can have only one several different type classes.  For
- * example, %G_VARIANT_TYPE_BOOLEAN is of the following classes:
- * %G_VARIANT_TYPE_CLASS_BOOLEAN, %G_VARIANT_TYPE_CLASS_BASIC,
- * %G_VARIANT_TYPE_CLASS_FIXED, %G_VARIANT_TYPE_CLASS_FIXED_BASIC,
- * %G_VARIANT_TYPE_CLASS_ALL.
- *
- * Each #GVariantType has one class that it is a member of that is
- * said to be the "natural class" of that type.  This is the "most
- * obvious" class.  The natural class of any basic type is the class
- * that contains only that type.  The natural class of any container
- * type is the class for that container.  The "fixed", "basic" or
- * "all" classes are the natural classes only for each of their
- * directly corresponding types.  An easy way to think of the natural
- * class of a type is that it can be completely determined from the
- * first character of the type string of that type.
+ * A #GVariantType is said to "be of" a given #GVariantTypeClass.  The
+ * type classes are overlapping, so a given #GVariantType may have
+ * more than one type class.  For example, %G_VARIANT_TYPE_BOOLEAN is
+ * of the following classes: %G_VARIANT_TYPE_CLASS_BOOLEAN,
+ * %G_VARIANT_TYPE_CLASS_BASIC, %G_VARIANT_TYPE_CLASS_ALL.
  **/
 typedef enum
 {
@@ -90,8 +77,8 @@ typedef enum
   G_VARIANT_TYPE_CLASS_STRUCT             = 'r',
   G_VARIANT_TYPE_CLASS_DICT_ENTRY         = 'e',
 
-  G_VARIANT_TYPE_CLASS_ANY                = '*',
-  G_VARIANT_TYPE_CLASS_ANY_BASIC          = '?'
+  G_VARIANT_TYPE_CLASS_ALL                = '*',
+  G_VARIANT_TYPE_CLASS_BASIC              = '?'
 } GVariantTypeClass;
 
 /**
@@ -251,7 +238,7 @@ typedef enum
  *
  * A wildcard type matching any dictionary entry type.
  **/
-#define G_VARIANT_TYPE_ANY_DICT_ENTRY       ((const GVariantType *) "e")
+#define G_VARIANT_TYPE_ANY_DICT_ENTRY       ((const GVariantType *) "{?*}")
 
 /**
  * G_VARIANT_TYPE_ANY_DICTIONARY:
@@ -293,7 +280,7 @@ gboolean                        g_variant_type_matches                  (const G
                                                                          const GVariantType  *pattern);
 
 /* class functions */
-gboolean                        g_variant_type_has_class                (const GVariantType  *type,
+gboolean                        g_variant_type_is_of_class              (const GVariantType  *type,
                                                                          GVariantTypeClass    class);
 GVariantTypeClass               g_variant_type_get_class                (const GVariantType  *type);
 gboolean                        g_variant_type_class_is_container       (GVariantTypeClass    class);

@@ -72,7 +72,7 @@ g_variant_type_string_scan (const gchar **type_string,
       if (*type_string == limit || **type_string == '\0')
         return FALSE;
 
-      if (!strchr ("bynqiuxtdsog", *(*type_string)++))         /* key */
+      if (!strchr ("bynqiuxtdsog?", *(*type_string)++))        /* key */
         return FALSE;
 
       if (!g_variant_type_string_scan (type_string, limit))    /* value */
@@ -88,7 +88,7 @@ g_variant_type_string_scan (const gchar **type_string,
 
     case 'b': case 'y': case 'n': case 'q': case 'i': case 'u':
     case 'x': case 't': case 'd': case 's': case 'o': case 'g':
-    case 'v': case 'r': case 'e': case '*':
+    case 'v': case 'r': case '*': case '?':
       return TRUE;
 
     default:
@@ -251,7 +251,7 @@ _g_variant_type_check_string (const gchar *type_string)
  * type.  A #GVariant instance may only have a concrete type.
  *
  * A type is concrete if its type string does not contain any wildcard
- * characters ('*', 'r' or 'e').
+ * characters ('*', '?' or 'r').
  **/
 gboolean
 g_variant_type_is_concrete (const GVariantType *type)
@@ -261,7 +261,7 @@ g_variant_type_is_concrete (const GVariantType *type)
   gsize i;
 
   for (i = 0; i < type_length; i++)
-    if (strchr ("*?@&re", type_string[i]))
+    if (strchr ("*?r", type_string[i]))
       return FALSE;
 
   return TRUE;
@@ -292,7 +292,6 @@ g_variant_type_is_container (const GVariantType *type)
     case 'm':
     case 'r':
     case '(':
-    case 'e':
     case '{':
     case 'v':
       return TRUE;
@@ -314,7 +313,8 @@ g_variant_type_is_container (const GVariantType *type)
  *
  * Only a basic type may be used as the key of a dictionary entry.
  *
- * This function returns %FALSE for all wildcard types.
+ * This function returns %FALSE for all wildcard types except
+ * %G_VARIANT_TYPE_ANY_BASIC.
  **/
 gboolean
 g_variant_type_is_basic (const GVariantType *type)
@@ -336,7 +336,6 @@ g_variant_type_is_basic (const GVariantType *type)
     case 'o':
     case 'g':
     case '?':
-    case '&':
       return TRUE;
 
     default:
@@ -353,6 +352,8 @@ g_variant_type_is_basic (const GVariantType *type)
  *
  * Fixed sized types are booleans, bytes, integers, doubles and
  * structures and dictionary entries made out of fixed types.
+ *
+ * This function returns %FALSE for all wildcard types.
  **/
 gboolean
 g_variant_type_is_fixed_size (const GVariantType *type)
@@ -478,7 +479,7 @@ g_variant_type_matches (const GVariantType *type,
         {
           const GVariantType *target_type = G_VARIANT_TYPE (type_string);
 
-          if (!g_variant_type_has_class (target_type, pattern_char))
+          if (!g_variant_type_is_of_class (target_type, pattern_char))
             return FALSE;
 
           type_string += g_variant_type_get_string_length (target_type);
@@ -489,15 +490,15 @@ g_variant_type_matches (const GVariantType *type,
 }
 
 gboolean
-g_variant_type_has_class (const GVariantType *type,
-                          GVariantTypeClass   class)
+g_variant_type_is_of_class (const GVariantType *type,
+                            GVariantTypeClass   class)
 {
   char first_char = *(const gchar *) type;
 
   switch (class)
   {
     case G_VARIANT_TYPE_CLASS_STRUCT:
-      return first_char == '(';
+      return first_char == '(' || first_char == 'r';
 
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       return first_char == '{';
@@ -581,7 +582,7 @@ g_variant_type_class_is_basic (GVariantTypeClass class)
     case G_VARIANT_TYPE_CLASS_STRING:
     case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
     case G_VARIANT_TYPE_CLASS_SIGNATURE:
-    case G_VARIANT_TYPE_CLASS_ANY_BASIC:
+    case G_VARIANT_TYPE_CLASS_BASIC:
       return TRUE;
 
     default:
