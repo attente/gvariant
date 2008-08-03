@@ -11,5 +11,8 @@ main (void)
 
   g_print ("%s", string->str);
 
+  g_string_free (string, TRUE);
+  g_variant_unref (value);
+
   return 0;
 }

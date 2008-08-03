@@ -68,7 +68,9 @@ GVariant                       *g_variant_new_int64                     (gint64 
 GVariant                       *g_variant_new_double                    (gdouble               floating);
 GVariant                       *g_variant_new_string                    (const gchar          *string);
 GVariant                       *g_variant_new_object_path               (const gchar          *string);
+gboolean                        g_variant_is_object_path                (const gchar          *string);
 GVariant                       *g_variant_new_signature                 (const gchar          *string);
+gboolean                        g_variant_is_signature                  (const gchar          *string);
 GVariant                       *g_variant_new_variant                   (GVariant             *value);
 
 /* deconstructors */

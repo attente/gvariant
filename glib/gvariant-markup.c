@@ -95,11 +95,8 @@ g_variant_markup_print (GVariant *value,
             g_variant_markup_newline (string, newlines);
 
             while ((element = g_variant_iter_next (&iter)))
-              {
-                g_variant_markup_print (element, string,
-                                        newlines, indentation, tabstop);
-                g_variant_unref (element);
-              }
+              g_variant_markup_print (element, string,
+                                      newlines, indentation, tabstop);
 
             g_variant_markup_indent (string, indentation);
             g_string_append (string, "</array>");
@@ -123,11 +120,8 @@ g_variant_markup_print (GVariant *value,
             g_variant_markup_newline (string, newlines);
 
             while ((element = g_variant_iter_next (&iter)))
-              {
-                g_variant_markup_print (element, string,
-                                        newlines, indentation, tabstop);
-                g_variant_unref (element);
-              }
+              g_variant_markup_print (element, string,
+                                      newlines, indentation, tabstop);
 
             g_variant_markup_indent (string, indentation);
             g_string_append (string, "</struct>");
@@ -148,11 +142,8 @@ g_variant_markup_print (GVariant *value,
 
         g_variant_iter_init (&iter, value);
         while ((element = g_variant_iter_next (&iter)))
-          {
-            g_variant_markup_print (element, string,
-                                    newlines, indentation, tabstop);
-            g_variant_unref (element);
-          }
+          g_variant_markup_print (element, string,
+                                  newlines, indentation, tabstop);
 
         g_variant_markup_indent (string, indentation);
         g_string_append (string, "</dictionary-entry>");

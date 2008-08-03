@@ -13,6 +13,22 @@
 
 #include "gvariant-private.h"
 
+/**
+ * GVariantIter:
+ *
+ * An opaque structure type used to iterate over a container #GVariant
+ * instance.
+ *
+ * The iter must be initialised with a call to g_variant_iter_init()
+ * before using it.  After that, g_variant_iter_next() will return the
+ * child values, in order.
+ *
+ * The iter may maintain a reference to the container #GVariant until
+ * g_variant_iter_next() returns %NULL.  For this reason, it is
+ * essential that you call g_variant_iter_next() until %NULL is
+ * returned.  If you want to abort iterating part way through then use
+ * g_variant_iter_cancel().
+ */
 typedef struct
 {
   GVariant *value;
@@ -97,7 +113,7 @@ g_variant_iter_next (GVariantIter *iter)
   if (real->value == NULL)
     return NULL;
 
-  real->value = g_variant_get_child (real->value, real->offset++);
+  real->child = g_variant_get_child (real->value, real->offset++);
 
   if (real->offset == real->length)
     {
@@ -105,7 +121,7 @@ g_variant_iter_next (GVariantIter *iter)
       real->value = NULL;
     }
 
-  return real->value;
+  return real->child;
 }
 
 /**
@@ -191,48 +207,104 @@ g_variant_new_boolean (gboolean boolean)
   return g_variant_new_small (G_VARIANT_TYPE_BOOLEAN, &byte, 1);
 }
 
+/**
+ * g_variant_new_byte:
+ * @byte: a #guint8 value
+ * @returns: a new byte #GVariant instance
+ *
+ * Creates a new byte #GVariant instance.
+ **/
 GVariant *
 g_variant_new_byte (guint8 byte)
 {
   return g_variant_new_small (G_VARIANT_TYPE_BYTE, &byte, 1);
 }
 
-GVariant *
-g_variant_new_uint16 (guint16 uint16)
-{
-  return g_variant_new_small (G_VARIANT_TYPE_UINT16, &uint16, 2);
-}
-
+/**
+ * g_variant_new_int16:
+ * @int16: a #gint16 value
+ * @returns: a new byte #GVariant instance
+ *
+ * Creates a new int16 #GVariant instance.
+ **/
 GVariant *
 g_variant_new_int16 (gint16 int16)
 {
   return g_variant_new_small (G_VARIANT_TYPE_INT16, &int16, 2);
 }
 
+/**
+ * g_variant_new_uint16:
+ * @uint16: a #guint16 value
+ * @returns: a new byte #GVariant instance
+ *
+ * Creates a new uint16 #GVariant instance.
+ **/
 GVariant *
-g_variant_new_uint32 (guint32 uint32)
+g_variant_new_uint16 (guint16 uint16)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_UINT32, &uint32, 4);
+  return g_variant_new_small (G_VARIANT_TYPE_UINT16, &uint16, 2);
 }
 
+/**
+ * g_variant_new_int32:
+ * @int32: a #gint32 value
+ * @returns: a new byte #GVariant instance
+ *
+ * Creates a new int32 #GVariant instance.
+ **/
 GVariant *
 g_variant_new_int32 (gint32 int32)
 {
   return g_variant_new_small (G_VARIANT_TYPE_INT32, &int32, 4);
 }
 
+/**
+ * g_variant_new_uint32:
+ * @uint32: a #guint32 value
+ * @returns: a new uint32 #GVariant instance
+ *
+ * Creates a new uint32 #GVariant instance.
+ **/
 GVariant *
-g_variant_new_uint64 (guint64 uint64)
+g_variant_new_uint32 (guint32 uint32)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_UINT64, &uint64, 8);
+  return g_variant_new_small (G_VARIANT_TYPE_UINT32, &uint32, 4);
 }
 
+/**
+ * g_variant_new_int64:
+ * @int64: a #gint64 value
+ * @returns: a new byte #GVariant instance
+ *
+ * Creates a new int64 #GVariant instance.
+ **/
 GVariant *
 g_variant_new_int64 (gint64 int64)
 {
   return g_variant_new_small (G_VARIANT_TYPE_INT64, &int64, 8);
 }
 
+/**
+ * g_variant_new_uint64:
+ * @uint64: a #guint64 value
+ * @returns: a new uint64 #GVariant instance
+ *
+ * Creates a new uint64 #GVariant instance.
+ **/
+GVariant *
+g_variant_new_uint64 (guint64 uint64)
+{
+  return g_variant_new_small (G_VARIANT_TYPE_UINT64, &uint64, 8);
+}
+
+/**
+ * g_variant_new_double:
+ * @floating: a #gdouble floating point value
+ * @returns: a new double #GVariant instance
+ *
+ * Creates a new double #GVariant instance.
+ **/
 GVariant *
 g_variant_new_double (gdouble floating)
 {
@@ -247,9 +319,10 @@ g_variant_new_double (gdouble floating)
  * Creates a string #GVariant with the contents of @string.
  **/
 GVariant *
-g_variant_new_string (const char *string)
+g_variant_new_string (const gchar *string)
 {
-  return g_variant_load (G_VARIANT_TYPE_STRING, string, strlen (string) + 1, 0);
+  return g_variant_load (G_VARIANT_TYPE_STRING,
+                         string, strlen (string) + 1, 0);
 }
 
 /**
@@ -257,21 +330,113 @@ g_variant_new_string (const char *string)
  * @string: a normal C nul-terminated string
  * @returns: a new object path #GVariant instance
  *
- * Creates a object path #GVariant with the contents of @string.
- * @string must be a valid DBus object path.
+ * Creates a DBus object path #GVariant with the contents of @string.
+ * @string must be a valid DBus object path.  Use
+ * g_variant_is_object_path() if you're not sure.
  **/
 GVariant *
-g_variant_new_object_path (const char *string)
+g_variant_new_object_path (const gchar *string)
 {
   return g_variant_load (G_VARIANT_TYPE_OBJECT_PATH,
                          string, strlen (string) + 1, 0);
 }
 
+/**
+ * g_variant_is_object_path:
+ * @string: a normal C nul-terminated string
+ * @returns: %TRUE if @string is a DBus object path
+ *
+ * Determines if a given string is a valid DBus object path.  You
+ * should ensure that a string is a valid DBus object path before
+ * passing it to g_variant_new_object_path().
+ *
+ * A valid object path starts with '/' followed by zero or more
+ * sequences of characters separated by '/' characters.  Each sequence
+ * must contain only the characters "[A-Z][a-z][0-9]_".  No sequence
+ * (including the one following the final '/' character) may be empty.
+ **/
+gboolean
+g_variant_is_object_path (const gchar *string)
+{
+  /* according to DBus specification */
+  gsize i;
+
+  /* The path must begin with an ASCII '/' (integer 47) character */
+  if (string[0] != '/')
+    return FALSE;
+
+  for (i = 1; string[i]; i++)
+    /* Each element must only contain the ASCII characters
+     * "[A-Z][a-z][0-9]_" 
+     */
+    if (g_ascii_isalnum (string[i]) || string[i] == '_')
+      ;
+
+    /* must consist of elements separated by slash characters. */
+    else if (string[i] == '/')
+      {
+        /* No element may be the empty string. */
+        /* Multiple '/' characters cannot occur in sequence. */
+        if (string[i - 1] == '/')
+          return FALSE;
+      }
+
+    else
+      return FALSE;
+
+  /* A trailing '/' character is not allowed unless the path is the
+   * root path (a single '/' character).
+   */
+  if (i > 1 && string[i - 1] == '/')
+    return FALSE;
+
+  return TRUE;
+}
+
+/**
+ * g_variant_new_signature:
+ * @string: a normal C nul-terminated string
+ * @returns: a new signature #GVariant instance
+ *
+ * Creates a DBus type signature #GVariant with the contents of
+ * @string.  @string must be a valid DBus type signature.  Use
+ * g_variant_is_signature() if you're not sure.
+ **/
 GVariant *
-g_variant_new_signature (const char *string)
+g_variant_new_signature (const gchar *string)
 {
   return g_variant_load (G_VARIANT_TYPE_SIGNATURE,
                          string, strlen (string) + 1, 0);
+}
+
+/**
+ * g_variant_is_signature:
+ * @string: a normal C nul-terminated string
+ * @returns: %TRUE if @string is a DBus type signature
+ *
+ * Determines if a given string is a valid DBus type signature.  You
+ * should ensure that a string is a valid DBus object path before
+ * passing it to g_variant_new_signature().
+ *
+ * DBus type signatures consist of zero or more concrete #GVariantType
+ * strings in sequence.
+ **/
+gboolean
+g_variant_is_signature (const gchar *string)
+{
+  gsize first_invalid;
+
+  /* make sure no non-concrete characters appear */
+  first_invalid = strspn (string, "ybnqiuxtdvma(){}");
+  if (string[first_invalid])
+    return FALSE;
+
+  /* make sure each type string is well-formed */
+  while (*string)
+    if (!g_variant_type_string_scan (&string, NULL))
+      return FALSE;
+
+  return TRUE;
 }
 
 /**
@@ -303,7 +468,7 @@ g_variant_new_variant (GVariant *value)
  * Returns the boolean value of @value.
  *
  * It is an error to call this function with a @value of any type
- * other than 'boolean'.
+ * other than %G_VARIANT_TYPE_BOOLEAN.
  **/
 gboolean
 g_variant_get_boolean (GVariant *value)
@@ -324,7 +489,7 @@ g_variant_get_boolean (GVariant *value)
  * Returns the byte value of @value.
  *
  * It is an error to call this function with a @value of any type
- * other than 'byte'.
+ * other than %G_VARIANT_TYPE_BYTE.
  **/
 guint8
 g_variant_get_byte (GVariant *value)
@@ -338,6 +503,27 @@ g_variant_get_byte (GVariant *value)
 }
 
 /**
+ * g_variant_get_int16:
+ * @value: a int16 #GVariant instance
+ * @returns: a #gint16
+ *
+ * Returns the 16-bit signed integer value of @value.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than %G_VARIANT_TYPE_INT16.
+ **/
+gint16
+g_variant_get_int16 (GVariant *value)
+{
+  gint16 int16;
+
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_INT16));
+  g_variant_store (value, &int16);
+
+  return int16;
+}
+
+/**
  * g_variant_get_uint16:
  * @value: a uint16 #GVariant instance
  * @returns: a #guint16
@@ -345,7 +531,7 @@ g_variant_get_byte (GVariant *value)
  * Returns the 16-bit unsigned integer value of @value.
  *
  * It is an error to call this function with a @value of any type
- * other than 'uint16' -- even 'int16'.
+ * other than %G_VARIANT_TYPE_UINT16.
  **/
 guint16
 g_variant_get_uint16 (GVariant *value)
@@ -358,28 +544,16 @@ g_variant_get_uint16 (GVariant *value)
   return uint16;
 }
 
-gint16
-g_variant_get_int16 (GVariant *value)
-{
-  gint16 int16;
-
-  g_assert (g_variant_matches (value, G_VARIANT_TYPE_INT16));
-  g_variant_store (value, &int16);
-
-  return int16;
-}
-
-guint32
-g_variant_get_uint32 (GVariant *value)
-{
-  guint32 uint32;
-
-  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT32));
-  g_variant_store (value, &uint32);
-
-  return uint32;
-}
-
+/**
+ * g_variant_get_int32:
+ * @value: a int32 #GVariant instance
+ * @returns: a #gint32
+ *
+ * Returns the 32-bit signed integer value of @value.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than %G_VARIANT_TYPE_INT32.
+ **/
 gint32
 g_variant_get_int32 (GVariant *value)
 {
@@ -391,17 +565,37 @@ g_variant_get_int32 (GVariant *value)
   return int32;
 }
 
-guint64
-g_variant_get_uint64 (GVariant *value)
+/**
+ * g_variant_get_uint32:
+ * @value: a uint32 #GVariant instance
+ * @returns: a #guint32
+ *
+ * Returns the 32-bit unsigned integer value of @value.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than %G_VARIANT_TYPE_UINT32.
+ **/
+guint32
+g_variant_get_uint32 (GVariant *value)
 {
-  guint64 uint64;
+  guint32 uint32;
 
-  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT64));
-  g_variant_store (value, &uint64);
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT32));
+  g_variant_store (value, &uint32);
 
-  return uint64;
+  return uint32;
 }
 
+/**
+ * g_variant_get_int64:
+ * @value: a int64 #GVariant instance
+ * @returns: a #gint64
+ *
+ * Returns the 64-bit signed integer value of @value.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than %G_VARIANT_TYPE_INT64.
+ **/
 gint64
 g_variant_get_int64 (GVariant *value)
 {
@@ -413,6 +607,37 @@ g_variant_get_int64 (GVariant *value)
   return int64;
 }
 
+/**
+ * g_variant_get_uint64:
+ * @value: a uint64 #GVariant instance
+ * @returns: a #guint64
+ *
+ * Returns the 64-bit unsigned integer value of @value.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than %G_VARIANT_TYPE_UINT64.
+ **/
+guint64
+g_variant_get_uint64 (GVariant *value)
+{
+  guint64 uint64;
+
+  g_assert (g_variant_matches (value, G_VARIANT_TYPE_UINT64));
+  g_variant_store (value, &uint64);
+
+  return uint64;
+}
+
+/**
+ * g_variant_get_double:
+ * @value: a double #GVariant instance
+ * @returns: a #gdouble
+ *
+ * Returns the double precision floating point value of @value.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than %G_VARIANT_TYPE_DOUBLE.
+ **/
 gdouble
 g_variant_get_double (GVariant *value)
 {
@@ -424,7 +649,26 @@ g_variant_get_double (GVariant *value)
   return floating;
 }
 
-const char *
+/**
+ * g_variant_get_string:
+ * @value: a string #GVariant instance
+ * @length: a pointer to a #gsize, to store the length
+ * @returns: the constant string
+ *
+ * Returns the string value of a #GVariant instance with a string
+ * type.  This includes the types %G_VARIANT_TYPE_STRING,
+ * %G_VARIANT_TYPE_OBJECT_PATH and %G_VARIANT_TYPE_SIGNATURE.
+ *
+ * If @length is non-%NULL then the length of the string (in bytes) is
+ * returned there.  For trusted values, this information is already
+ * known.  For untrusted values, a strlen() will be performed.
+ *
+ * It is an error to call this function with a @value of any type
+ * other than those three.
+ *
+ * The return value remains valid as long as @value exists.
+ **/
+const gchar *
 g_variant_get_string (GVariant *value,
                       gsize    *length)
 {
@@ -438,7 +682,18 @@ g_variant_get_string (GVariant *value,
   return g_variant_get_data (value);
 }
 
-char *
+/**
+ * g_variant_dup_string:
+ * @value: a string #GVariant instance
+ * @length: a pointer to a #gsize, to store the length
+ * @returns: a newly allocated string
+ *
+ * Similar to g_variant_get_string() except that instead of returning
+ * a constant string, the string is duplicated.
+ *
+ * The return value must be free'd using g_free().
+ **/
+gchar *
 g_variant_dup_string (GVariant *value,
                       gsize    *length)
 {
@@ -456,6 +711,14 @@ g_variant_dup_string (GVariant *value,
   return g_memdup (g_variant_get_data (value), size);
 }
 
+/**
+ * g_variant_get_variant:
+ * @value: a variant #GVariance instance
+ * @returns: the item contained in the variant
+ *
+ * Unboxes @value.  The result is the #GVariant instance that was
+ * contained in @value.
+ **/
 GVariant *
 g_variant_get_variant (GVariant *value)
 {
