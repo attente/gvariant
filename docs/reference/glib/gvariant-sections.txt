@@ -9,6 +9,7 @@ g_variant_type_class_is_container
 <SECTION>
 <FILE>GVariantType</FILE>
 GVariantType
+
 <SUBSECTION>
 G_VARIANT_TYPE_BOOLEAN
 G_VARIANT_TYPE_BYTE
@@ -24,6 +25,7 @@ G_VARIANT_TYPE_OBJECT_PATH
 G_VARIANT_TYPE_SIGNATURE
 G_VARIANT_TYPE_VARIANT
 G_VARIANT_TYPE_ANY
+G_VARIANT_TYPE_ANY_BASIC
 G_VARIANT_TYPE_ANY_ARRAY
 G_VARIANT_TYPE_ANY_DICTIONARY
 G_VARIANT_TYPE_ANY_DICT_ENTRY
@@ -36,6 +38,7 @@ g_variant_type_string_is_valid
 g_variant_type_string_scan
 
 <SUBSECTION>
+G_VARIANT_TYPE
 g_variant_type_free
 g_variant_type_copy
 g_variant_type_new
@@ -46,6 +49,7 @@ g_variant_type_peek_string
 g_variant_type_dup_string
 
 <SUBSECTION>
+g_variant_type_get_class
 g_variant_type_is_in_class
 g_variant_type_is_concrete
 g_variant_type_is_container
@@ -68,6 +72,7 @@ g_variant_type_value
 <SUBSECTION>
 g_variant_type_new_maybe
 g_variant_type_new_array
+GVariantTypeGetter
 g_variant_type_new_struct
 g_variant_type_new_dict_entry
 </SECTION>
@@ -89,9 +94,9 @@ g_variant_flatten
 g_variant_get_type_class
 g_variant_get_type
 g_variant_get_type_string
-g_varaint_is_fixed_size
 g_variant_is_basic
 g_variant_is_container
+g_variant_is_fixed_size
 g_variant_matches
 
 <SUBSECTION>
@@ -158,8 +163,8 @@ g_variant_builder_open
 <SUBSECTION>
 g_variant_markup_print
 g_variant_markup_parse
-g_variant_markup_parser_push
-g_variant_markup_parser_pop
+g_variant_markup_subparser_start
+g_variant_markup_subparser_end
 g_variant_markup_parse_context_new
 g_variant_markup_parse_context_end
 </SECTION>
@@ -171,7 +176,6 @@ g_variant_store
 g_variant_get_data
 g_variant_get_size
 g_variant_load
-g_variant_is_normalised
 g_variant_from_slice
 g_variant_normalise
 g_variant_flatten
