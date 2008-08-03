@@ -11,7 +11,6 @@ MKDB_OPTIONS = --output-format=xml --sgml-mode
 include ../gtk-doc.make
 
 CLEANFILES += \
-	gvariant-overrides.txt \
 	gvariant-decl-list.txt \
 	gvariant-undocumented.txt \
 	gvariant-decl.txt \
