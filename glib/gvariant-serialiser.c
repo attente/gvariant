@@ -87,7 +87,7 @@ g_variant_serialiser_dereference (GVariantSerialised container,
                },
                *result = GSIZE_TO_LE (tmpvalue.integer));
 
-  return TRUE;
+  return G_LIKELY (*result <= container.size);
 }
 
 static void
@@ -103,6 +103,14 @@ g_variant_serialiser_assign (GVariantSerialised container,
                  memcpy (bytes, tmpvalue.bytes, offset_size);
                },);
 }
+
+#if 0
+static guint
+g_variant_serialiser_offset_size (GVariantSerialised container)
+{
+  check_cases (0, return 0;, return offset_size;,);
+}
+#endif
 
 static gboolean
 g_variant_serialiser_array_length (GVariantSerialised  container,
@@ -128,7 +136,7 @@ g_variant_serialiser_array_length (GVariantSerialised  container,
                  if G_UNLIKELY (length % divider != 0)
                    return FALSE;
 
-                 *length_ret = length;
+                 *length_ret = length / divider;
                });
 
   return TRUE;
@@ -899,6 +907,132 @@ g_variant_serialised_assert_invariant (GVariantSerialised value)
     g_assert_cmpint (value.size, ==, fixed_size);
 }
 
+#if 0
+static gboolean
+g_variant_serialised_is_normal (GVariantSerialised value)
+{
+  switch (g_variant_type_info_get_type_class (value.type))
+  {
+    case G_VARIANT_TYPE_CLASS_BYTE:
+    case G_VARIANT_TYPE_CLASS_INT16:
+    case G_VARIANT_TYPE_CLASS_UINT16:
+    case G_VARIANT_TYPE_CLASS_INT32:
+    case G_VARIANT_TYPE_CLASS_UINT32:
+    case G_VARIANT_TYPE_CLASS_INT64:
+    case G_VARIANT_TYPE_CLASS_UINT64:
+    case G_VARIANT_TYPE_CLASS_DOUBLE:
+      return TRUE;
+
+    case G_VARIANT_TYPE_CLASS_BOOLEAN:
+      return value.data[0] == FALSE || value.data[0] == TRUE;
+
+    case G_VARIANT_TYPE_CLASS_STRING:
+      return value.size > 0 && value.data[value.size - 1] == '\0' &&
+             strlen ((const char *) value.data) + 1 == value.size;
+
+    case G_VARIANT_TYPE_CLASS_MAYBE:
+      {
+        GVariantTypeInfo *element;
+        gssize fixed_size;
+
+        /* Nothing case */
+        if (value.size == 0)
+          return TRUE;
+
+        /* Just case */
+        element = g_variant_type_info_element (value.type);
+        g_variant_type_info_query (element, NULL, &fixed_size);
+
+        if (fixed_size > 0)
+          {
+            /* if element is fixed size, Just must be the same */
+            return value.size == fixed_size;
+          }
+        else
+          {
+            /* if element is variable size, we have a zero pad */
+            if (value.data[value.size - 1] != '\0')
+              return FALSE;
+
+            /* and the element itself should check out */
+            value.type = element;
+            value.size--;
+
+            return g_variant_serialised_is_normal (value);
+          }
+      }
+
+    case G_VARIANT_TYPE_CLASS_ARRAY:
+      {
+        GVariantTypeInfo *element;
+        gssize fixed_size;
+
+        if (value.size == 0)
+          return TRUE;
+
+        element = g_variant_type_info_element (value.type);
+        g_variant_type_info_query (element, NULL, &fixed_size);
+
+        if (fixed_size > 0)
+          {
+            gsize i;
+
+            if (value.size % fixed_size)
+              return FALSE;
+
+            for (i = 0; i < value.size / fixed_size; i++)
+              {
+                GVariantSerialised child = { element,
+                                             &value.data[fixed_size * i],
+                                             fixed_size };
+                
+                if (!g_variant_serialised_is_normal (child))
+                  return FALSE;
+              }
+
+            return TRUE;
+          }
+        else
+          {
+            guint offset_size;
+            gboolean success;
+            gsize length;
+            gsize end;
+
+            /* we will need this to check on some things manually */
+            offset_size = g_variant_serialiser_get_offset_size (value);
+            g_assert (offset_size > 0);
+
+            /* make sure the end offset is in-bounds */
+            if (!g_variant_serialiser_dereference (value, 0, &end))
+              return FALSE;
+
+            /* make sure we have an integer number of offsets */
+            if ((value.size - end) % offset_size)
+              return FALSE;
+
+            /* number of offsets = length of the array */
+            length = (value.size - end) / offset_size;
+
+            /* ensure that the smallest possible offset size was chosen */
+            if (value.size !=
+                g_variant_serialiser_determine_size (end, length, TRUE))
+              return FALSE;
+            
+            g_assert_not_reached (); /* XXX */
+          }
+      }
+
+    case G_VARIANT_TYPE_CLASS_STRUCT:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
+      {
+
+      }
+  }
+
+}
+#endif
+
 gboolean
 g_variant_serialised_is_normalised (GVariantSerialised value)
 {
@@ -937,16 +1071,31 @@ g_variant_serialised_is_normalised (GVariantSerialised value)
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
     case G_VARIANT_TYPE_CLASS_VARIANT:
       {
+        GVariantSerialised last;
         gsize children, i;
 
         children = g_variant_serialised_n_children (value);
         for (i = 0; i < children; i++)
           {
             GVariantSerialised child;
+            guchar *zero;
 
             child = g_variant_serialised_get_child (value, i);
+
+            if (child.data == NULL)
+              return FALSE;
+
+            if (i && child.data < &last.data[last.size])
+              return FALSE;
+
+            for (zero = &last.data[last.size]; zero < child.data; zero++)
+              if (*zero != '\0')
+                return FALSE;
+
             if (!g_variant_serialised_is_normalised (child))
               return FALSE;
+
+            last = child;
           }
         break;
       }

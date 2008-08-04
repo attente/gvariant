@@ -198,11 +198,7 @@ g_variant_valist_new (const gchar **format_string,
 
     case 's':
       (*format_string)++;
-      {
-        const char *karstar = va_arg (*app, const gchar *);
-        g_print ("i see '%s'\n", karstar);
-      return g_variant_new_string (karstar);
-      }
+      return g_variant_new_string (va_arg (*app, const gchar *));
 
     case 'o':
       (*format_string)++;
