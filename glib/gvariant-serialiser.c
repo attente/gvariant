@@ -378,7 +378,6 @@ g_variant_serialised_get_child (GVariantSerialised container,
                                                  info->index, &start))
             return g_variant_serialiser_error (container, info->type);
 
-        //g_print ("%d -> *%d +%x &%x |%x\n", index, info.index, info.plus, info.and, info.or);
         start += info->plus;
         start &= info->and;
         start |= info->or;
@@ -397,7 +396,6 @@ g_variant_serialised_get_child (GVariantSerialised container,
         else
           end = start + info->size;
 
-//        g_print ("from %d to %d\n", start, end);
         return g_variant_serialiser_sub (container, info->type, start, end);
       }
 
@@ -874,9 +872,6 @@ g_variant_serialised_byteswap (GVariantSerialised value)
     {
       gsize children, i;
       
-      g_print ("was %d %d %s\n", alignment, fixed_size,
-               g_variant_type_peek_string (g_variant_type_info_get_type (value.type)));
-
       children = g_variant_serialised_n_children (value);
       for (i = 0; i < children; i++)
         {
