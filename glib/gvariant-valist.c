@@ -14,6 +14,40 @@
 #include <glib/gmessages.h>
 #include <string.h>
 
+/**
+ * g_variant_format_string_scan:
+ * @format_string: a pass-by-reference pointer to the start of a
+ *                 possible format string
+ * @returns: %TRUE if a format string was scanned
+ *
+ * Checks the string pointed to by @format_string for starting with a
+ * properly formed #GVariant varargs format string.  If a format
+ * string is fount, @format_string is updated to point to the first
+ * character following the format string and %TRUE is returned.
+ *
+ * If no valid format string is found, %FALSE is returned and the
+ * state of the @format_string pointer is undefined.
+ *
+ * All valid #GVariantType strings are also valid format strings.  See
+ * g_variant_type_string_is_valid().
+ *
+ * Additionally, any type string contained in the format string may be
+ * prefixed with a '@' character.  Nested '@' characters may not
+ * appear.
+ *
+ * Additionally, any fixed-width type may be prefixed with a '&'
+ * character.  No wildcard type is a fixed-width type.  Like '@', '&'
+ * characters may not be nested.
+ *
+ * No '@' or '&' character, however, may appear as part of an array
+ * type.
+ *
+ * Currently, there are no other permissible format strings.  Others
+ * may be added in the future.
+ *
+ * For an explanation of what these strings mean, see g_variant_new()
+ * and g_variant_get().
+ **/
 gboolean
 g_variant_format_string_scan (const gchar **format_string)
 {
@@ -35,8 +69,20 @@ g_variant_format_string_scan (const gchar **format_string)
       if (**format_string == '\0')
         return FALSE;
 
-      /* XXX key could be a @ or & */
-      if (!strchr ("bynqiuxtdsog", *(*format_string)++))     /* key */
+      /* key may only be a basic type.  three posibilities for that:
+       */
+      if (strchr ("bynqiuxtdsog?", **format_string))
+        *format_string += 1;
+
+      else if ((*format_string)[0] == '@' &&
+               strchr ("bynqiuxtdsog?", (*format_string)[1]))
+        *format_string += 2;
+
+      else if ((*format_string)[0] == '&' &&
+               strchr ("bynqiuxtdsog", (*format_string)[1]))
+        *format_string += 2;
+
+      else
         return FALSE;
 
       if (!g_variant_format_string_scan (format_string))    /* value */
@@ -56,19 +102,19 @@ g_variant_format_string_scan (const gchar **format_string)
 
     case '&':
       {
-        const GVariantType *type;
+        const gchar *start;
 
-        type = (const GVariantType *) *format_string;
+        start = *format_string;
         if (!g_variant_type_string_scan (format_string, NULL))
           return FALSE;
 
-        if (!g_variant_type_is_fixed_size (type))
+        if (start + strspn (start, "bynqiuxtd(){}") != *format_string)
           return FALSE;
       }
 
     case 'b': case 'y': case 'n': case 'q': case 'i': case 'u':
     case 'x': case 't': case 'd': case 's': case 'o': case 'g':
-    case 'v': case '*':
+    case 'v': case '*': case '?':
       return TRUE;
 
     default:
@@ -152,7 +198,11 @@ g_variant_valist_new (const gchar **format_string,
 
     case 's':
       (*format_string)++;
-      return g_variant_new_string (va_arg (*app, const gchar *));
+      {
+        const char *karstar = va_arg (*app, const gchar *);
+        g_print ("i see '%s'\n", karstar);
+      return g_variant_new_string (karstar);
+      }
 
     case 'o':
       (*format_string)++;
@@ -472,6 +522,8 @@ typedef guchar gbyte;
         else
           end_char = '}';
 
+        *format_string += 1;
+
         g_variant_iter_init (&iter, value);
         while ((value = g_variant_iter_next (&iter)))
           g_variant_valist_get (value, free, format_string, app);
@@ -645,7 +697,7 @@ g_variant_new_va (const gchar **format_string,
   GVariant *value;
 
   value = g_variant_valist_new (format_string, app);
-  g_variant_flatten (value);
+//  g_variant_flatten (value);
 
   return value;
 }
@@ -675,16 +727,15 @@ g_variant_get_va (GVariant     *value,
   g_assert (g_variant_matches (value, type));
   g_variant_type_free (type);
 
-  g_variant_flatten (value);
+//  g_variant_flatten (value);
   g_variant_valist_get (value, FALSE, format_string, app);
 }
-
 
 /**
  * g_variant_iterate:
  * @iter: a #GVariantIter
  * @format_string: a format string
- * @...: arguments, according to @format_string
+ * @...: arguments, as per @format_string
  * @returns: %TRUE if a child was fetched or %FALSE if not
  *
  * Retreives the next child value from @iter and deconstructs it
@@ -728,7 +779,8 @@ g_variant_iterate (GVariantIter *iter,
     return FALSE;
 
   va_start (ap, format_string);
-  //g_variant_vget (value, format_string, ap);
+  g_variant_get_va (value, &format_string, &ap);
+  g_assert (*format_string == '\0');
   va_end (ap);
 
   g_variant_unref (value);
@@ -736,7 +788,39 @@ g_variant_iterate (GVariantIter *iter,
   return TRUE;
 }
 
-
+/**
+ * g_variant_builder_add:
+ * @builder: a #GVariantBuilder
+ * @format_string: a #GVariant varargs format string
+ * @...: arguments, as per @format_string
+ *
+ * Adds to a #GVariantBuilder.
+ *
+ * This call is a convenience wrapper that is exactly equivalent to
+ * calling g_variant_new() followed by g_variant_builder_add_value().
+ * 
+ * This function might be used as follows:
+ *
+ * <programlisting>
+ * GVariant *
+ * make_pointless_dictionary (void)
+ * {
+ *   GVariantBuilder *builder;
+ *   int i;
+ *
+ *   builder = g_variant_builder_new (G_VARIANT_TYPE_CLASS_ARRAY, NULL);
+ *   for (i = 0; i < 16; i++)
+ *     {
+ *       char buf[3];
+ *
+ *       sprintf (buf, "%d", i);
+ *       g_variant_builder_add (builder, "{is}", i, buf);
+ *     }
+ *
+ *   return g_variant_builder_end (builder);
+ * }
+ * </programlisting>
+ **/
 void
 g_variant_builder_add (GVariantBuilder *builder,
                        const gchar     *format_string,

@@ -362,7 +362,7 @@ g_variant_type_info_get (const GVariantType *type)
 {
   GVariantTypeInfo *info;
 
-  if (G_UNLIKELY (g_variant_type_info_table == NULL))
+  if G_UNLIKELY (g_variant_type_info_table == NULL)
     g_variant_type_info_table = g_hash_table_new (g_variant_type_hash,
                                                   g_variant_type_equal);
 

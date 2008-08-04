@@ -1202,18 +1202,59 @@ g_variant_builder_cancel (GVariantBuilder *builder)
   while ((builder = parent));
 }
 
+/**
+ * g_variant_flatten:
+ * @value: a #GVariant instance
+ *
+ * Flattens @value.
+ *
+ * This is a strange function with no direct effects but some
+ * noteworthy side-effects.  Essentially, it ensures that @value is in
+ * its most favourable form.  This involves ensuring that the value is
+ * serialised and in machine byte order.  The investment of time now
+ * can pay off by allowing shorter access times for future calls and
+ * typically results in a reduction of memory consumption.
+ *
+ * A value received over the network or read from the disk in machine
+ * byte order is already flattened.
+ *
+ * Some of the effects of this call are that any future accesses to
+ * the data of @value (or children taken from it after flattening)
+ * will occur in O(1) time.  Also, any data accessed from such a child
+ * value will continue to be valid even after the child has been
+ * destroyed, as long as @value still exists (since the contents of
+ * the children are now serialised as part of the parent).
+ **/
 void
 g_variant_flatten (GVariant *value)
 {
   g_variant_get_data (value);
 }
 
+/**
+ * g_variant_get_type_string:
+ * @value: a #GVariant
+ * @returns: the type string for the type of @value
+ *
+ * Returns the type string of @value.  Unlike the result of calling
+ * g_variant_type_string_peek(), this string is nul-terminated.  This
+ * string belongs to #GVariant and must not be free'd.
+ **/
 const gchar *
 g_variant_get_type_string (GVariant *value)
 {
   return (const gchar *) g_variant_get_type (value);
 }
 
+/**
+ * g_variant_get_type_class:
+ * @value: a #GVariant
+ * @returns: the #GVariantTypeClass of @value
+ *
+ * Returns the type class of @value.  This function is equivalent to
+ * calling g_variant_get_type() followed by
+ * g_variant_type_get_class().
+ **/
 GVariantTypeClass
 g_variant_get_type_class (GVariant *value)
 {

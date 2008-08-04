@@ -345,32 +345,6 @@ g_variant_type_is_basic (const GVariantType *type)
 }
 
 /**
- * g_variant_type_is_fixed_size:
- * @type: a #GVariantType
- * @returns: %TRUE if @type is a fixed-size type
- *
- * Determines if the given type is a fixed-size type.
- *
- * Fixed sized types are booleans, bytes, integers, doubles and
- * structures and dictionary entries made out of fixed types.
- *
- * This function returns %FALSE for all wildcard types.
- **/
-gboolean
-g_variant_type_is_fixed_size (const GVariantType *type)
-{
-  const gchar *type_string = g_variant_type_peek_string (type);
-  gsize length = g_variant_type_get_string_length (type);
-  gsize i;
-
-  for (i = 0; i < length; i++)
-   if (strchr ("am*?sog", type_string[i]))
-     return FALSE;
-
-  return TRUE;
-}
-
-/**
  * g_variant_type_hash:
  * @type: a #GVariantType
  * @returns: the hash value

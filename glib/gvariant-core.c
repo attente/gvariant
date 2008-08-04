@@ -1348,3 +1348,81 @@ g_variant_normalise (GVariant *value)
    */
   g_error ("sorry.  can't normalise non-normal values yet..."); /* XXX */
 }
+
+/**
+ * g_variant_get_fixed:
+ * @value: a #GVariant
+ * @size: the size of @value
+ * @returns: a pointer to the fixed-sized data
+ *
+ * Gets a pointer to the data of a fixed sized #GVariant instance.
+ * This pointer can be treated as a pointer to the equivalent C
+ * stucture type and accessed directly.  The data is in machine byte
+ * order.
+ *
+ * @size must be equal to the fixed size of the type of @value.  It
+ * isn't used for anything, but serves as a sanity check to ensure the
+ * user of this function will be able to make sense of the data they
+ * receive a pointer to.
+ *
+ * This function may return %NULL if @size is zero.
+ **/
+gconstpointer
+g_variant_get_fixed (GVariant *value,
+                     gsize     size)
+{
+  gboolean is_fixed;
+  gssize fixed_size;
+
+  g_variant_type_info_query (value->type, NULL, &fixed_size);
+  is_fixed = fixed_size >= 0;
+
+  g_assert (is_fixed);
+  g_assert_cmpint (size, ==, fixed_size);
+
+  return g_variant_get_data (value);
+}
+
+/**
+ * g_variant_get_fixed_array:
+ * @value: an array #GVariant
+ * @elem_size: the size of one array element
+ * @length: a pointer to the length of the array, or %NULL
+ * @returns: a pointer to the array data
+ *
+ * Gets a pointer to the data of an array of fixed sized #GVariant
+ * instances.  This pointer can be treated as a pointer to an array of
+ * the equivalent C structure type and accessed directly.  The data is
+ * in machine byte order.
+ *
+ * @elem_size must be equal to the fixed size of the element type of
+ * @value.  It isn't used for anything, but serves as a sanity check
+ * to ensure the user of this function will be able to make sense of
+ * the data they receive a pointer to.
+ *
+ * @length is set equal to the number of items in the array, so that
+ * the size of the memory region returned is @elem_size times @length.
+ *
+ * This function may return %NULL if either @elem_size or @length is
+ * zero.
+ */
+gconstpointer
+g_variant_get_fixed_array (GVariant *value,
+                           gsize     elem_size,
+                           gsize    *length)
+{
+  gboolean is_fixed_array;
+  gssize fixed_elem_size;
+
+  /* unsupported: maybes are treated as arrays of size zero or one */
+  g_variant_type_info_query_element (value->type, NULL, &fixed_elem_size);
+  is_fixed_array = fixed_elem_size >= 0;
+
+  g_assert (is_fixed_array);
+  g_assert_cmpint (elem_size, ==, fixed_elem_size);
+
+  if (length != NULL)
+    *length = g_variant_n_children (value);
+
+  return g_variant_get_data (value);
+}

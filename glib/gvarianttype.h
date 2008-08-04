@@ -268,7 +268,6 @@ gchar                          *g_variant_type_dup_string               (const G
 gboolean                        g_variant_type_is_concrete              (const GVariantType  *type);
 gboolean                        g_variant_type_is_container             (const GVariantType  *type);
 gboolean                        g_variant_type_is_basic                 (const GVariantType  *type);
-gboolean                        g_variant_type_is_fixed_size            (const GVariantType  *type);
 
 /* for hash tables */
 guint                           g_variant_type_hash                     (gconstpointer        type);

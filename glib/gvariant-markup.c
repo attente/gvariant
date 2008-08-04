@@ -43,7 +43,7 @@ g_variant_markup_print (GVariant *value,
 
   type = g_variant_get_type (value);
 
-  if (G_UNLIKELY (string == NULL))
+  if G_UNLIKELY (string == NULL)
     string = g_string_new (NULL);
 
   indentation += tabstop;
@@ -489,9 +489,9 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
         if (!g_ascii_isspace (data->string->str[i]))
           break;
 
-      if (G_UNLIKELY (i == data->string->len) &&
-          class != G_VARIANT_TYPE_CLASS_STRING &&
-          class != G_VARIANT_TYPE_CLASS_SIGNATURE)
+      if G_UNLIKELY (i == data->string->len &&
+                     class != G_VARIANT_TYPE_CLASS_STRING &&
+                     class != G_VARIANT_TYPE_CLASS_SIGNATURE)
         {
           g_set_error (error, G_MARKUP_ERROR,
                        G_MARKUP_ERROR_INVALID_CONTENT,
@@ -575,7 +575,7 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
 
       /* ensure only trailing whitespace */
       for (i = 0; end && end[i]; i++)
-        if (G_UNLIKELY (!g_ascii_isspace (end[i])))
+        if G_UNLIKELY (!g_ascii_isspace (end[i]))
           {
             g_set_error (error, G_MARKUP_ERROR,
                          G_MARKUP_ERROR_INVALID_CONTENT,
@@ -611,7 +611,7 @@ g_variant_markup_parser_text (GMarkupParseContext  *context,
       int i;
 
       for (i = 0; i < text_len; i++)
-        if (G_UNLIKELY (!g_ascii_isspace (text[i])))
+        if G_UNLIKELY (!g_ascii_isspace (text[i]))
           {
             g_set_error (error, G_MARKUP_ERROR,
                          G_MARKUP_ERROR_INVALID_CONTENT,

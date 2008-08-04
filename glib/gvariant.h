@@ -36,7 +36,6 @@ void                            g_variant_flatten                       (GVarian
 GVariantTypeClass               g_variant_get_type_class                (GVariant             *value);
 const GVariantType             *g_variant_get_type                      (GVariant             *value);
 const gchar                    *g_variant_get_type_string               (GVariant             *value);
-gboolean                        g_variant_is_fixed_size                 (GVariant             *value);
 gboolean                        g_variant_is_basic                      (GVariant             *value);
 gboolean                        g_variant_is_container                  (GVariant             *value);
 gboolean                        g_variant_matches                       (GVariant             *value,
@@ -88,9 +87,11 @@ const gchar                    *g_variant_get_string                    (GVarian
 gchar                          *g_variant_dup_string                    (GVariant             *value,
                                                                          gsize                *length);
 GVariant                       *g_variant_get_variant                   (GVariant             *value);
-gconstpointer                   g_variant_get_fixed                     (GVariant             *value);
+gconstpointer                   g_variant_get_fixed                     (GVariant             *value,
+                                                                         gsize                 size);
 gconstpointer                   g_variant_get_fixed_array               (GVariant             *value,
-                                                                         gsize                *n_items);
+                                                                         gsize                 elem_size,
+                                                                         gsize                *length);
 GVariant                       *g_variant_get_child                     (GVariant             *value,
                                                                          gsize                 index);
 gsize                           g_variant_n_children                    (GVariant             *value);
