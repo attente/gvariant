@@ -7,6 +7,7 @@ AM_LDFLAGS      = ../libgvariant.la
 
 TEST_PROGS     += gvariant-endian
 TEST_PROGS     += gvariant-markup
+TEST_PROGS     += gvariant-objpath
 TEST_PROGS     += gvariant-random
 TEST_PROGS     += gvariant-serialiser
 TEST_PROGS     += gvariant-varargs
