@@ -204,7 +204,8 @@ g_variant_new_boolean (gboolean boolean)
 {
   guint8 byte = !!boolean;
 
-  return g_variant_new_small (G_VARIANT_TYPE_BOOLEAN, &byte, 1);
+  return g_variant_load (G_VARIANT_TYPE_BOOLEAN,
+                         &byte, 1, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -217,7 +218,8 @@ g_variant_new_boolean (gboolean boolean)
 GVariant *
 g_variant_new_byte (guint8 byte)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_BYTE, &byte, 1);
+  return g_variant_load (G_VARIANT_TYPE_BYTE,
+                         &byte, 1, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -230,7 +232,8 @@ g_variant_new_byte (guint8 byte)
 GVariant *
 g_variant_new_int16 (gint16 int16)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_INT16, &int16, 2);
+  return g_variant_load (G_VARIANT_TYPE_INT16,
+                         &int16, 2, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -243,7 +246,8 @@ g_variant_new_int16 (gint16 int16)
 GVariant *
 g_variant_new_uint16 (guint16 uint16)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_UINT16, &uint16, 2);
+  return g_variant_load (G_VARIANT_TYPE_UINT16,
+                         &uint16, 2, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -256,7 +260,8 @@ g_variant_new_uint16 (guint16 uint16)
 GVariant *
 g_variant_new_int32 (gint32 int32)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_INT32, &int32, 4);
+  return g_variant_load (G_VARIANT_TYPE_INT32,
+                         &int32, 4, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -269,7 +274,8 @@ g_variant_new_int32 (gint32 int32)
 GVariant *
 g_variant_new_uint32 (guint32 uint32)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_UINT32, &uint32, 4);
+  return g_variant_load (G_VARIANT_TYPE_UINT32,
+                         &uint32, 4, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -282,7 +288,8 @@ g_variant_new_uint32 (guint32 uint32)
 GVariant *
 g_variant_new_int64 (gint64 int64)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_INT64, &int64, 8);
+  return g_variant_load (G_VARIANT_TYPE_INT64,
+                         &int64, 8, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -295,7 +302,8 @@ g_variant_new_int64 (gint64 int64)
 GVariant *
 g_variant_new_uint64 (guint64 uint64)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_UINT64, &uint64, 8);
+  return g_variant_load (G_VARIANT_TYPE_UINT64,
+                         &uint64, 8, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -308,7 +316,8 @@ g_variant_new_uint64 (guint64 uint64)
 GVariant *
 g_variant_new_double (gdouble floating)
 {
-  return g_variant_new_small (G_VARIANT_TYPE_DOUBLE, &floating, 8);
+  return g_variant_load (G_VARIANT_TYPE_DOUBLE,
+                         &floating, 8, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -322,7 +331,7 @@ GVariant *
 g_variant_new_string (const gchar *string)
 {
   return g_variant_load (G_VARIANT_TYPE_STRING,
-                         string, strlen (string) + 1, 0);
+                         string, strlen (string) + 1, G_VARIANT_TRUSTED);
 }
 
 /**
@@ -337,8 +346,11 @@ g_variant_new_string (const gchar *string)
 GVariant *
 g_variant_new_object_path (const gchar *string)
 {
+  g_assert (g_variant_is_object_path (string));
+
   return g_variant_load (G_VARIANT_TYPE_OBJECT_PATH,
-                         string, strlen (string) + 1, 0);
+                         string, strlen (string) + 1,
+                         G_VARIANT_TRUSTED);
 }
 
 /**
@@ -405,8 +417,11 @@ g_variant_is_object_path (const gchar *string)
 GVariant *
 g_variant_new_signature (const gchar *string)
 {
+  g_assert (g_variant_is_signature (string));
+
   return g_variant_load (G_VARIANT_TYPE_SIGNATURE,
-                         string, strlen (string) + 1, 0);
+                         string, strlen (string) + 1,
+                         G_VARIANT_TRUSTED);
 }
 
 /**
