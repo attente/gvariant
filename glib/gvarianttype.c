@@ -134,6 +134,7 @@ g_variant_type_free (GVariantType *type)
 /**
  * g_variant_type_copy:
  * @type: a #GVariantType
+ * @returns: a new #GVariantType
  *
  * Makes a copy of a #GVariantType.  This copy must be freed using
  * g_variant_type_free().
@@ -906,6 +907,7 @@ g_variant_type_new_maybe (const GVariantType *element)
  * g_variant_type_new_dict_entry:
  * @key: a basic #GVariantType
  * @value: a #GVariantType
+ * @returns: a new dictionary entry #GVariantType
  *
  * Constructs the type corresponding to a dictionary entry with a key
  * of type @key and a value of type @value.

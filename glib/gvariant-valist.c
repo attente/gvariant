@@ -683,46 +683,36 @@ g_variant_get_va (GVariant     *value,
 /**
  * g_variant_iterate:
  * @iter: a #GVariantIter
- * @type_string: a #GVaraintType string
- * @returns: %TRUE if a child was fetched or
- *   %FALSE if no children remain.
+ * @format_string: a format string
+ * @...: arguments, according to @format_string
+ * @returns: %TRUE if a child was fetched or %FALSE if not
  *
- * Retreives the next child value from @iter and
- * deconstructs it according to @type_string.
+ * Retreives the next child value from @iter and deconstructs it
+ * according to @format_string.  This call is sort of like calling
+ * g_variant_iter_next() and g_variant_get().
  *
- * This call is essentially equivalent to
- * g_variant_iter_next() and g_variant_get().  On
- * all but the first access to the iterator the
- * given pointers are freed, if appropriate.
+ * This function does something else, though: on all but the first
+ * call (including on the last call, which returns %FALSE) the values
+ * allocated by the previous call will be free'd.  This allows you to
+ * iterate without ever freeing anything yourself.  In the case of
+ * #GVariant * arguments, they are unref'd and in the case of
+ * #GVariantIter arguments, they are cancelled.
  *
- * It might be used as follows:
+ * Note that strings are not free'd since (as with g_variant_get())
+ * they are constant pointers to internal #GVariant data.
+ *
+ * This function might be used as follows:
  *
  * <programlisting>
  * {
+ *   const gchar *key, *value;
  *   GVariantIter iter;
- *   char *key, *value;
  *   ...
  *
  *   while (g_variant_iterate (iter, "{ss}", &key, &value))
- *     printf ("dict{%s} = %s\n", key, value);
+ *     printf ("dict['%s'] = '%s'\n", key, value);
  * }
  * </programlisting>
- *
- * Note that on each time through the loop 'key'
- * and 'value' are newly allocated strings.  They
- * do not need to be freed, however, since the
- * next call to g_variant_iterate will free them.
- *
- * Before the first iteration of the loop, the
- * pointers are not expected to be initialised to
- * any particular value.  After the last iteration
- * the pointers will be set to %NULL.
- *
- * If you wish to 'steal' the newly allocated
- * strings for yourself then you must set the
- * pointers to %NULL before the next call to
- * g_variant_iterate() to prevent them from being
- * freed.
  **/
 gboolean
 g_variant_iterate (GVariantIter *iter,

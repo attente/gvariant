@@ -1,8 +1,18 @@
-#include <glib/gvariant.h>
-#include <string.h>
-#include <glib.h>
+/*
+ * Copyright © 2008 Ryan Lortie
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of version 3 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * See the included COPYING file for more information.
+ */
 
-#include "gvariant-loadstore.h" /* XXX cheating... */
+#include <glib/gtestutils.h>
+#include <glib/gmessages.h>
+#include <glib/gvariant.h>
+
+#include <string.h>
 
 static void
 g_variant_markup_indent (GString *string,
@@ -352,7 +362,8 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
 
   if (data->string != NULL)
     {
-      g_set_error (error, 0, 0, /* XXX FIXME */
+      g_set_error (error, G_MARKUP_ERROR,
+                   G_MARKUP_ERROR_INVALID_CONTENT,
                    "only character data may appear here (not <%s>)",
                    element_name);
       return;
@@ -360,7 +371,8 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
 
   if (data->terminal_value)
     {
-      g_set_error (error, 0, 0, /* XXX FIXME */
+      g_set_error (error, G_MARKUP_ERROR,
+                   G_MARKUP_ERROR_INVALID_CONTENT,
                    "nothing may appear here except </%s>",
                    (const gchar *)
                    g_markup_parse_context_get_element_stack (context)
@@ -385,7 +397,8 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
 
   if (class == G_VARIANT_TYPE_CLASS_INVALID)
     {
-      g_set_error (error, 0, 0, /* XXX FIXME */
+      g_set_error (error, G_MARKUP_ERROR,
+                   G_MARKUP_ERROR_UNKNOWN_ELEMENT,
                    "the <%s> tag is unrecognised", element_name);
       return;
     }
@@ -401,7 +414,8 @@ g_variant_markup_parser_start_element (GMarkupParseContext  *context,
 
   if (type_string && !g_variant_type_string_is_valid (type_string))
     {
-      g_set_error (error, 0, 0, /* XXX FIXME */
+      g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                   G_VARIANT_BUILDER_ERROR_TYPE,
                    "'%s' is not a valid type string", type_string);
       return;
     }
@@ -476,9 +490,11 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
           break;
 
       if (G_UNLIKELY (i == data->string->len) &&
-          class != G_VARIANT_TYPE_CLASS_STRING)
+          class != G_VARIANT_TYPE_CLASS_STRING &&
+          class != G_VARIANT_TYPE_CLASS_SIGNATURE)
         {
-          g_set_error (error, 0, 0, /* XXX FIXME */
+          g_set_error (error, G_MARKUP_ERROR,
+                       G_MARKUP_ERROR_INVALID_CONTENT,
                        "character data expected before </%s>",
                        element_name);
           return;
@@ -526,7 +542,31 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
 
         case G_VARIANT_TYPE_CLASS_STRING:
           value = g_variant_new_string (data->string->str);
-          end = (char *) "";
+          end = NULL;
+          break;
+
+        case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
+          if (!g_variant_is_object_path (data->string->str))
+            {
+              g_set_error (error, G_MARKUP_ERROR,
+                           G_MARKUP_ERROR_INVALID_CONTENT,
+                           "invalid object path: '%s'", data->string->str);
+              return;
+            }
+          value = g_variant_new_object_path (data->string->str);
+          end = NULL;
+          break;
+
+        case G_VARIANT_TYPE_CLASS_SIGNATURE:
+          if (!g_variant_is_signature (data->string->str))
+            {
+              g_set_error (error, G_MARKUP_ERROR,
+                           G_MARKUP_ERROR_INVALID_CONTENT,
+                           "invalid DBus signature: '%s'", data->string->str);
+              return;
+            }
+          value = g_variant_new_signature (data->string->str);
+          end = NULL;
           break;
 
         default:
@@ -534,10 +574,11 @@ g_variant_markup_parser_end_element (GMarkupParseContext  *context,
       }
 
       /* ensure only trailing whitespace */
-      for (i = 0; end[i]; i++)
+      for (i = 0; end && end[i]; i++)
         if (G_UNLIKELY (!g_ascii_isspace (end[i])))
           {
-            g_set_error (error, 0, 0, /* XXX FIXME */
+            g_set_error (error, G_MARKUP_ERROR,
+                         G_MARKUP_ERROR_INVALID_CONTENT,
                          "cannot interpret character data");
             g_variant_unref (value);
             return;
@@ -572,7 +613,8 @@ g_variant_markup_parser_text (GMarkupParseContext  *context,
       for (i = 0; i < text_len; i++)
         if (G_UNLIKELY (!g_ascii_isspace (text[i])))
           {
-            g_set_error (error, 0, 0, /* XXX FIXME */
+            g_set_error (error, G_MARKUP_ERROR,
+                         G_MARKUP_ERROR_INVALID_CONTENT,
                          "character data ('%c') is invalid here", text[i]);
             break;
           }
@@ -786,6 +828,7 @@ g_variant_markup_parse (const gchar         *text,
 /**
  * g_variant_markup_parse_context_new:
  * @flags: #GMarkupParseFlags
+ * @type: a #GVariantType constraining the type of the root element
  * @returns: a new #GMarkupParseContext
  *
  * One of the three interfaces to the #GVariant markup parser.  For
@@ -801,6 +844,11 @@ g_variant_markup_parse (const gchar         *text,
  * call.  After the entire document is fed, you call
  * g_variant_markup_parse_context_end() to free the context and
  * retreive the value.
+ *
+ * If @type is non-%NULL then it constrains the permissible types that
+ * the root element may have.  It also serves to hint the parser about
+ * the type of this element (and may, for example, resolve errors
+ * caused by the inability to infer the type).
  *
  * If you want to abort parsing, you should free the context using
  * g_markup_parse_context_free().

@@ -102,7 +102,7 @@ GVariant                       *g_variant_iter_next                     (GVarian
 void                            g_variant_iter_cancel                   (GVariantIter         *iter);
 gboolean                        g_variant_iter_was_cancelled            (GVariantIter         *iter);
 gboolean                        g_variant_iterate                       (GVariantIter         *iter,
-                                                                         const gchar          *type_string,
+                                                                         const gchar          *format_string,
                                                                          ...);
 
 /* GVariantBuilder */
