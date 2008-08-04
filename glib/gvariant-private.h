@@ -19,12 +19,6 @@ GVariant                       *g_variant_new_tree                      (const G
                                                                          GVariant           **children,
                                                                          gsize                n_children,
                                                                          gboolean             trusted);
-GVariant                       *g_variant_new_small                     (const GVariantType  *type,
-                                                                         gpointer             data,
-                                                                         gsize                size);
-void                            g_variant_get_small                     (GVariant            *value,
-                                                                         gpointer             data,
-                                                                         gsize                size);
 void                            g_variant_ensure_native_endian          (GVariant            *value);
 void                            g_variant_assert_invariant              (GVariant            *value);
 gboolean                        g_variant_is_normalised                 (GVariant            *value);
