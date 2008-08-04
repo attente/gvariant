@@ -196,7 +196,7 @@ g_variant_serialiser_sub (GVariantSerialised  container,
 {
   GVariantSerialised result = { g_variant_type_info_ref (type) };
 
-  if G_LIKELY (start < end && end < container.size)
+  if G_LIKELY (start <= end && end <= container.size)
     {
       result.data = &container.data[start];
       result.size = end - start;
