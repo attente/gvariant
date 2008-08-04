@@ -1275,3 +1275,40 @@ g_variant_get_type_class (GVariant *value)
 {
   return g_variant_type_get_class (g_variant_get_type (value));
 }
+
+#include <glib/gstdio.h>
+void
+g_variant_dump_data (GVariant *value)
+{
+  const guchar *data;
+  const guchar *end;
+  char row[3*16+2];
+  gsize data_size;
+  gsize i;
+
+  data_size = g_variant_get_size (value);
+
+  g_debug ("GVariant at %p (type '%s', %d bytes):",
+           value, g_variant_get_type_string (value), data_size);
+
+  data = g_variant_get_data (value);
+  end = data + data_size;
+
+  i = 0;
+  row[3*16+1] = '\0';
+  while (data < end || (i & 15))
+    {
+      if ((i & 15) == (((gsize) data) & 15) && data < end)
+        g_sprintf (&row[3 * (i & 15) + (i & 8)/8], "%02x ", *data++);
+      else
+        g_sprintf (&row[3 * (i & 15) + (i & 8)/8], "    ");
+
+      if ((++i & 15) == 0)
+        {
+          g_debug ("   %s", row);
+          memset (row, 'q', 3 * 16 + 1);
+        }
+    }
+
+  g_debug ("==");
+}
