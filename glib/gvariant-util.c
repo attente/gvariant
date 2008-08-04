@@ -742,6 +742,12 @@ g_variant_get_variant (GVariant *value)
   return g_variant_get_child (value, 0);
 }
 
+/**
+ * GVariantBuilder:
+ *
+ * An opaque type used to build container #GVariant instances one
+ * child value at a time.
+ */
 struct OPAQUE_TYPE__GVariantBuilder
 {
   GVariantBuilder *parent;
@@ -756,6 +762,28 @@ struct OPAQUE_TYPE__GVariantBuilder
   int has_child : 1;
   int trusted : 1;
 };
+
+/**
+ * G_VARIANT_BUILDER_ERROR:
+ *
+ * Error domain for #GVariantBuilder. Errors in this domain will be
+ * from the #GVariantBuilderError enumeration.  See #GError for
+ * information on error domains. 
+ **/
+/**
+ * GVariantBuilderError:
+ * @G_VARIANT_BUILDER_ERROR_TOO_MANY: too many items have been added
+ * (returned by g_variant_builder_check_add())
+ * @G_VARIANT_BUILDER_ERROR_TOO_FEW: too few items have been added
+ * (returned by g_variant_builder_check_end())
+ * @G_VARIANT_BUILDER_ERROR_INFER: unable to infer the type of an
+ * array or maybe (returned by g_variant_builder_check_end())
+ * @G_VARIANT_BUILDER_ERROR_TYPE: the value is of the incorrect type
+ * (returned by g_variant_builder_check_add())
+ *
+ * Errors codes returned by g_variant_builder_check_add() and
+ * g_variant_builder_check_end().
+ */
 
 static void
 g_variant_builder_resize (GVariantBuilder *builder,
@@ -791,6 +819,17 @@ g_variant_builder_check_add_value (GVariantBuilder  *builder,
   return g_variant_builder_check_add (builder, class, type, error);
 }
 
+/**
+ * g_variant_builder_add_value:
+ * @builder: a #GVariantBuilder
+ * @value: a #GVariant
+ *
+ * Adds @value to @builder.
+ *
+ * It is an error to call this function if @builder has an outstanding
+ * child.  It is an error to call this function in any case that
+ * g_variant_builder_check_add() would return %FALSE.
+ **/
 void
 g_variant_builder_add_value (GVariantBuilder *builder,
                              GVariant        *value)
@@ -813,6 +852,27 @@ g_variant_builder_add_value (GVariantBuilder *builder,
   builder->children[builder->offset++] = g_variant_ref_sink (value);
 }
 
+/**
+ * g_variant_builder_open:
+ * @parent: a #GVariantBuilder
+ * @class: a #GVariantTypeClass
+ * @type: a #GVariantType, or %NULL
+ * @returns: a new (child) #GVariantBuilder
+ *
+ * Opens a subcontainer inside the given @parent.
+ *
+ * It is not permissible to use any other builder calls with @parent
+ * until @g_variant_builder_close() is called on the return value of
+ * this function.
+ *
+ * It is an error to call this function if @parent has an outstanding
+ * child.  It is an error to call this function in any case that
+ * g_variant_builder_check_add() would return %FALSE.
+ *
+ * If @type is %NULL and @parent was given type information, that
+ * information is passed down to the subcontainer and constrains what
+ * values may be added to it.
+ **/
 GVariantBuilder *
 g_variant_builder_open (GVariantBuilder    *parent,
                         GVariantTypeClass   class,
@@ -837,12 +897,27 @@ g_variant_builder_open (GVariantBuilder    *parent,
   return child;
 }
 
+/**
+ * g_variant_builder_close:
+ * @child: a #GVariantBuilder
+ * @returns: the original parent of @child
+ *
+ * This function closes a builder that was created with a call to
+ * g_variant_builder_open().
+ *
+ * It is an error to call this function on a builder that was created
+ * using g_variant_builder_new().  It is an error to call this
+ * function if @child has an outstanding child.  It is an error to
+ * call this function in any case that g_variant_builder_check_end()
+ * would return %FALSE.
+ **/
 GVariantBuilder *
 g_variant_builder_close (GVariantBuilder *child)
 {
   GVariantBuilder *parent;
   GVariant *value;
 
+  g_assert (child->has_child == FALSE);
   g_assert (child != NULL);
   g_assert (child->parent != NULL);
 
@@ -857,12 +932,35 @@ g_variant_builder_close (GVariantBuilder *child)
   return parent;
 }
 
+/**
+ * g_variant_builder_new:
+ * @class: a container #GVariantTypeClass
+ * @type: a type contained in @class, or %NULL
+ * @returns: a #GVariantBuilder
+ *
+ * Creates a new #GVariantBuilder.
+ *
+ * @class must be specified and must be a container type.
+ *
+ * If @type is given, it constrains the child values that it is
+ * permissible to add.  If @class is not %G_VARIANT_TYPE_CLASS_VARIANT
+ * then @type must be contained in @class and will be the @type of the
+ * final value.  If @class is %G_VARIANT_TYPE_CLASS_VARIANT then @type
+ * is the type of the value that must be added to the variant.
+ *
+ * After the builder is created, values are added using
+ * g_variant_builder_add_value().
+ *
+ * After all the child values are added, g_variant_builder_end() ends
+ * the process. 
+ **/
 GVariantBuilder *
 g_variant_builder_new (GVariantTypeClass   class,
                        const GVariantType *type)
 {
   GVariantBuilder *builder;
 
+  g_assert (g_variant_type_class_is_container (class));
   g_assert (type == NULL || g_variant_type_is_concrete (type));
   g_assert (class == G_VARIANT_TYPE_CLASS_VARIANT ||
             type == NULL || g_variant_type_is_in_class (type, class));
@@ -917,6 +1015,19 @@ g_variant_builder_new (GVariantTypeClass   class,
   return builder;
 }
 
+/**
+ * g_variant_builder_end:
+ * @builder: a #GVariantBuilder
+ * @returns: a new, floating, #GVariant
+ *
+ * Ends the builder process and returns the constructed value.
+ *
+ * It is an error to call this function on a #GVariantBuilder created
+ * by a call to g_variant_builder_open().  It is an error to call this
+ * function if @builder has an outstanding child.  It is an error to
+ * call this function in any case that g_variant_builder_check_end()
+ * would return %FALSE.
+ **/
 GVariant *
 g_variant_builder_end (GVariantBuilder *builder)
 {
@@ -978,9 +1089,34 @@ g_variant_builder_end (GVariantBuilder *builder)
   return value;
 }
 
+/**
+ * g_variant_builder_check_end:
+ * @builder: a #GVariantBuilder
+ * @error: a #GError
+ * @returns: %TRUE if ending is safe
+ *
+ * Checks if a call to g_variant_builder_end() or
+ * g_variant_builder_close() would succeed.
+ *
+ * It is an error to call this function if @builder has a child (ie:
+ * g_variant_builder_open() has been used on @builder and
+ * g_variant_builder_close() has not yet been called).
+ *
+ * This function checks that a sufficient number of items have been
+ * added to the builder.  For dictionary entries, for example, it
+ * ensures that 2 items were added.
+ *
+ * This function also checks that array and maybe builders that were
+ * created without further type information contain at least one item
+ * (without which it would be impossible to infer the type).
+ *
+ * If some sort of error (either too few items were added or type
+ * inference is not possible) prevents the builder from being ended
+ * then %FALSE is returned and @error is set.
+ **/
 gboolean
-g_variant_builder_check_end (GVariantBuilder     *builder,
-                             GError             **error)
+g_variant_builder_check_end (GVariantBuilder  *builder,
+                             GError          **error)
 {
   g_assert (builder != NULL);
   g_assert (builder->has_child == FALSE);
@@ -1047,6 +1183,41 @@ g_variant_builder_check_end (GVariantBuilder     *builder,
   return TRUE;
 }
 
+/**
+ * g_variant_builder_check_add:
+ * @builder: a #GVariantBuilder
+ * @class: a #GVariantTypeClass
+ * @type: a #GVariantType, or %NULL
+ * @error: a #GError
+ * @returns: %TRUE if adding is safe
+ *
+ * Does all sorts of checks to ensure that it is safe to call
+ * g_variant_builder_add() or g_variant_builder_open().
+ *
+ * It is an error to call this function if @builder has a child (ie:
+ * g_variant_builder_open() has been used on @builder and
+ * g_variant_builder_close() has not yet been called).
+ *
+ * It is an error to call this function with an invalid @class
+ * (including %G_VARIANT_TYPE_CLASS_INVALID).
+ *
+ * If @type is non-%NULL this function first checks that it is a
+ * member of @class (except, as with g_variant_builder_new(), if
+ * @class is %G_VARIANT_TYPE_CLASS_VARIANT then any @type is OK).
+ *
+ * The function then checks if a child of class @class (and type
+ * @type, if given) would be suitable for adding to the builder.
+ * Errors are flagged in the event that the builder contains too many
+ * items or the addition would cause a type error.
+ *
+ * If @class is specified and is a container type and @type is not
+ * given then there is no guarantee that adding a value of that class
+ * would not fail.  Calling g_variant_builder_open() with that @class
+ * (and @type as %NULL) would succeed, though.
+ *
+ * In the case that any error is detected @error is set and %FALSE is
+ * returned.
+ **/
 gboolean
 g_variant_builder_check_add (GVariantBuilder     *builder,
                              GVariantTypeClass    class,
@@ -1191,6 +1362,14 @@ g_variant_builder_check_add (GVariantBuilder     *builder,
   return TRUE;
 }
 
+/**
+ * g_variant_builder_cancel:
+ * @builder: a #GVariantBuilder
+ *
+ * Cancels the build process.  All memory associated with @builder is
+ * free'd.  If the builder was created with g_variant_builder_open()
+ * then all ancestors are also free'd.
+ **/
 void
 g_variant_builder_cancel (GVariantBuilder *builder)
 {
@@ -1274,6 +1453,39 @@ GVariantTypeClass
 g_variant_get_type_class (GVariant *value)
 {
   return g_variant_type_get_class (g_variant_get_type (value));
+}
+
+/**
+ * g_variant_is_basic:
+ * @value: a #GVariant
+ * @returns: %TRUE if @value has a basic type
+ *
+ * Determines if @value has a basic type.  Values with basic types may
+ * be used as the keys of dictionary entries.
+ *
+ * This function is the exact opposite of g_variant_is_container().
+ **/
+gboolean
+g_variant_is_basic (GVariant *value)
+{
+  return g_variant_type_class_is_basic (g_variant_get_type_class (value));
+}
+
+/**
+ * g_variant_is_container:
+ * @value: a #GVariant
+ * @returns: %TRUE if @value has a basic type
+ *
+ * Determines if @value has a container type.  Values with container
+ * types may be used with the functions g_variant_n_children() and
+ * g_variant_get_child().
+ *
+ * This function is the exact opposite of g_variant_is_basic().
+ **/
+gboolean
+g_variant_is_container (GVariant *value)
+{
+  return g_variant_type_class_is_container (g_variant_get_type_class (value));
 }
 
 #include <glib/gstdio.h>

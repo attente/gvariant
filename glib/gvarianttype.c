@@ -750,6 +750,17 @@ g_variant_type_value (const GVariantType *type)
 }
 
 /**
+ * GVariantTypeGetter:
+ * @data: a pointer
+ * @returns: a const #GVariantType
+ *
+ * A callback function intended for use with
+ * g_variant_type_new_struct().  This function's purpose is to extract
+ * a #GVariantType from some pointer type.  The returned type should
+ * be owned by whatever is at the end of the pointer because it won't
+ * be free'd.
+ **/
+/**
  * g_variant_type_new_struct:
  * @items: an array of items, one for each item
  * @func: a function to determine each item type

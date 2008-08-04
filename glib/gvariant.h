@@ -110,7 +110,7 @@ gboolean                        g_variant_iterate                       (GVarian
 void                            g_variant_builder_add_value             (GVariantBuilder      *builder,
                                                                          GVariant             *value);
 void                            g_variant_builder_add                   (GVariantBuilder      *builder,
-                                                                         const gchar          *type_string,
+                                                                         const gchar          *format_string,
                                                                          ...);
 GVariantBuilder                *g_variant_builder_open                  (GVariantBuilder      *parent,
                                                                          GVariantTypeClass     class,
