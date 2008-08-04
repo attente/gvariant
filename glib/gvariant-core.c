@@ -38,7 +38,7 @@
 
 typedef enum
 {
-  G_VARIANT_LARGE,
+  G_VARIANT_SERIALISED,
   G_VARIANT_TREE,
   G_VARIANT_NOTIFY
 } GVariantRepresentation;
@@ -58,7 +58,7 @@ struct OPAQUE_TYPE__GVariant
       GVariant *source;
       guint8 *data;
       gsize size;
-    } large;
+    } serialised;
 
     struct
     {
@@ -175,12 +175,12 @@ g_variant_unref (GVariant *value)
       /* free the data */
       switch (value->representation)
       {
-        case G_VARIANT_LARGE:
-          if (value->contents.large.source)
-            g_variant_unref (value->contents.large.source);
+        case G_VARIANT_SERIALISED:
+          if (value->contents.serialised.source)
+            g_variant_unref (value->contents.serialised.source);
           else
-            g_slice_free1 (value->contents.large.size,
-                           value->contents.large.data);
+            g_slice_free1 (value->contents.serialised.size,
+                           value->contents.serialised.data);
           break;
 
         case G_VARIANT_TREE:
@@ -341,11 +341,11 @@ g_variant_from_slice (const GVariantType *type,
 {
   GVariant *variant;
 
-  variant = g_variant_alloc (G_VARIANT_LARGE,
+  variant = g_variant_alloc (G_VARIANT_SERIALISED,
                              g_variant_type_info_get (type));
-  variant->contents.large.source = NULL;
-  variant->contents.large.data = slice;
-  variant->contents.large.size = size;
+  variant->contents.serialised.source = NULL;
+  variant->contents.serialised.data = slice;
+  variant->contents.serialised.size = size;
 
   return g_variant_apply_flags (variant, flags);
 }
@@ -370,9 +370,9 @@ g_variant_copy_safely (GVariant     *source,
                        const guchar *src,
                        gsize         size)
 {
-  g_assert (source->representation == G_VARIANT_LARGE ||
+  g_assert (source->representation == G_VARIANT_SERIALISED ||
             source->representation == G_VARIANT_NOTIFY);
-  g_assert (source->contents.large.source == NULL);
+  g_assert (source->contents.serialised.source == NULL);
 
   if (!((volatile GVariant *)source)->native_endian)
     {
@@ -408,10 +408,10 @@ g_variant_get_gvs (GVariant  *value,
 {
   GVariantSerialised gvs = { value->type };
 
-  g_assert (value->representation == G_VARIANT_LARGE);
+  g_assert (value->representation == G_VARIANT_SERIALISED);
   check (value);
 
-  if (source && value->contents.large.source)
+  if (source && value->contents.serialised.source)
     {
       /* it is possible that someone may unparent this value at
        * any time we are unlocked, so be careful here.
@@ -419,23 +419,23 @@ g_variant_get_gvs (GVariant  *value,
 
       g_variant_lock (value);
 
-      if (value->contents.large.source)
-        *source = g_variant_ref (value->contents.large.source);
+      if (value->contents.serialised.source)
+        *source = g_variant_ref (value->contents.serialised.source);
       else
         *source = g_variant_ref (value);
-      gvs.data = value->contents.large.data;
+      gvs.data = value->contents.serialised.data;
 
       g_variant_unlock (value);
     }
   else
     {
-      gvs.data = value->contents.large.data;
+      gvs.data = value->contents.serialised.data;
 
       if (source)
         *source = g_variant_ref (value);
     }
 
-  gvs.size = value->contents.large.size;
+  gvs.size = value->contents.serialised.size;
 
   return gvs;
 }
@@ -447,13 +447,13 @@ g_variant_from_gvs (GVariantSerialised  gvs,
 {
   GVariant *value;
 
-  g_assert (source->representation == G_VARIANT_LARGE ||
+  g_assert (source->representation == G_VARIANT_SERIALISED ||
             source->representation == G_VARIANT_NOTIFY);
 
-  value = g_variant_alloc (G_VARIANT_LARGE, gvs.type);
-  value->contents.large.source = g_variant_ref (source);
-  value->contents.large.size = gvs.size;
-  value->contents.large.data = gvs.data;
+  value = g_variant_alloc (G_VARIANT_SERIALISED, gvs.type);
+  value->contents.serialised.source = g_variant_ref (source);
+  value->contents.serialised.size = gvs.size;
+  value->contents.serialised.data = gvs.data;
   value->native_endian = source->native_endian;
   value->trusted = trusted || source->trusted;
 
@@ -521,10 +521,10 @@ g_variant_get_child (GVariant *value,
        * pointer.  if not, then a size of zero is valid.
        */
       g_variant_type_info_query (gvs.type, NULL, &size);
-      child = g_variant_alloc (G_VARIANT_LARGE, gvs.type);
-      child->contents.large.source = NULL;
-      child->contents.large.data = g_slice_alloc0 (size);
-      child->contents.large.size = size;
+      child = g_variant_alloc (G_VARIANT_SERIALISED, gvs.type);
+      child->contents.serialised.source = NULL;
+      child->contents.serialised.data = g_slice_alloc0 (size);
+      child->contents.serialised.size = size;
     }
   else
     /* no error */
@@ -619,7 +619,7 @@ g_variant_get_type (GVariant *value)
  * g_variant_copy_self:
  * @value: a #GVariant
  *
- * Takes a large serialised value that uses its parent's data and
+ * Takes a serialised serialised value that uses its parent's data and
  * makes a copy of the data for itself.  This allows the reference on
  * the parent to be released.
  *
@@ -633,19 +633,19 @@ g_variant_copy_self (GVariant *value)
   gboolean native;
   guchar *new;
 
-  g_assert (value->representation == G_VARIANT_LARGE);
-  g_assert (value->contents.large.source != NULL);
+  g_assert (value->representation == G_VARIANT_SERIALISED);
+  g_assert (value->contents.serialised.source != NULL);
 
-  new = g_slice_alloc (value->contents.large.size);
-  native = g_variant_copy_safely (value->contents.large.source,
-                                  new, value->contents.large.data,
-                                  value->contents.large.size);
+  new = g_slice_alloc (value->contents.serialised.size);
+  native = g_variant_copy_safely (value->contents.serialised.source,
+                                  new, value->contents.serialised.data,
+                                  value->contents.serialised.size);
   value->native_endian = native;
 
   g_variant_lock (value);
-  value->contents.large.data = new;
-  g_variant_unref (value->contents.large.source);
-  value->contents.large.source = NULL;
+  value->contents.serialised.data = new;
+  g_variant_unref (value->contents.serialised.source);
+  value->contents.serialised.source = NULL;
   g_variant_unlock (value);
 }
 #endif
@@ -671,13 +671,13 @@ g_variant_ensure_native_endian (GVariant *value)
   if (value->native_endian)
     return;
 
-  g_assert (value->representation == G_VARIANT_LARGE);
+  g_assert (value->representation == G_VARIANT_SERIALISED);
 
   g_variant_lock (value);
 
-  if (!value->native_endian && value->contents.large.source)
+  if (!value->native_endian && value->contents.serialised.source)
     {
-      GVariant *source = value->contents.large.source;
+      GVariant *source = value->contents.serialised.source;
       gboolean native;
       guchar *new;
 
@@ -690,27 +690,27 @@ g_variant_ensure_native_endian (GVariant *value)
 
       if (!value->native_endian)
         {
-          new = g_slice_alloc (value->contents.large.size);
+          new = g_slice_alloc (value->contents.serialised.size);
           native = g_variant_copy_safely (source, new,
-                                          value->contents.large.data,
-                                          value->contents.large.size);
+                                          value->contents.serialised.data,
+                                          value->contents.serialised.size);
 
           /* just incase source change endian since we checked */
           value->native_endian = native;
 
-          value->contents.large.data = new;
-          g_variant_unref (value->contents.large.source);
-          value->contents.large.source = NULL;
+          value->contents.serialised.data = new;
+          g_variant_unref (value->contents.serialised.source);
+          value->contents.serialised.source = NULL;
         }
     }
 
-  g_assert (value->contents.large.source == NULL);
+  g_assert (value->contents.serialised.source == NULL);
 
   if (!value->native_endian)
     {
       GVariantSerialised gvs = { value->type,
-                                 value->contents.large.data,
-                                 value->contents.large.size };
+                                 value->contents.serialised.data,
+                                 value->contents.serialised.size };
 
       g_variant_serialised_byteswap (gvs);
 
@@ -763,10 +763,10 @@ g_variant_load (const GVariantType *type,
 
   mydata = g_slice_alloc (size);
 
-  value = g_variant_alloc (G_VARIANT_LARGE, type_info);
-  value->contents.large.source = NULL;
-  value->contents.large.data = mydata;
-  value->contents.large.size = size;
+  value = g_variant_alloc (G_VARIANT_SERIALISED, type_info);
+  value->contents.serialised.source = NULL;
+  value->contents.serialised.data = mydata;
+  value->contents.serialised.size = size;
 
   memcpy (mydata, data, size);
 
@@ -810,7 +810,7 @@ g_variant_gsv_filler (GVariantSerialised *serialised,
  * @data: the location to store the serialised data at
  *
  * Stores the serialised form of @variant at @data.  @data should be
- * large enough.  See g_variant_get_size().
+ * serialised enough.  See g_variant_get_size().
  *
  * The stored data is in machine native byte order but may not be in
  * fully-normalised form if read from an untrusted source.  See
@@ -859,11 +859,11 @@ g_variant_store (GVariant *value,
         break;
       }
 
-    case G_VARIANT_LARGE:
+    case G_VARIANT_SERIALISED:
       g_variant_ensure_native_endian (value);
 
-      memcpy (data, value->contents.large.data,
-              value->contents.large.size);
+      memcpy (data, value->contents.serialised.data,
+              value->contents.serialised.size);
       break;
 
     default:
@@ -922,11 +922,11 @@ g_variant_get_data (GVariant *value)
         children = value->contents.tree.children;
         n_children = value->contents.tree.n_children;
 
-        value->representation = G_VARIANT_LARGE;
+        value->representation = G_VARIANT_SERIALISED;
         container.data = g_slice_alloc (container.size);
-        value->contents.large.source = NULL;
-        value->contents.large.data = container.data;
-        value->contents.large.size = container.size;
+        value->contents.serialised.source = NULL;
+        value->contents.serialised.data = container.data;
+        value->contents.serialised.size = container.size;
 
         g_variant_serialiser_serialise (container, &g_variant_gsv_filler,
                                         (gpointer *) children, n_children);
@@ -945,10 +945,10 @@ g_variant_get_data (GVariant *value)
         return container.data;
       }
 
-    case G_VARIANT_LARGE:
+    case G_VARIANT_SERIALISED:
       g_variant_ensure_native_endian (value);
 
-      return value->contents.large.data;
+      return value->contents.serialised.data;
 
     default:
       g_assert_not_reached ();
@@ -1011,8 +1011,8 @@ g_variant_get_size (GVariant *value)
 
       return size;
 
-    case G_VARIANT_LARGE:
-      return value->contents.large.size;
+    case G_VARIANT_SERIALISED:
+      return value->contents.serialised.size;
 
     default:
       g_assert_not_reached ();
@@ -1049,26 +1049,26 @@ g_variant_assert_invariant (GVariant *value)
       g_variant_unlock (value);
       return;
 
-    case G_VARIANT_LARGE:
-      if (value->contents.large.source)
+    case G_VARIANT_SERIALISED:
+      if (value->contents.serialised.source)
         {
-          GVariant *source = value->contents.large.source;
+          GVariant *source = value->contents.serialised.source;
 
           g_assert (source->native_endian || !value->native_endian);
-          g_assert (source->representation == G_VARIANT_LARGE ||
+          g_assert (source->representation == G_VARIANT_SERIALISED ||
                     source->representation == G_VARIANT_NOTIFY);
 
-          if (source->representation == G_VARIANT_LARGE)
+          if (source->representation == G_VARIANT_SERIALISED)
             {
               /* no grandparents */
-              g_assert (source->contents.large.source == NULL);
+              g_assert (source->contents.serialised.source == NULL);
               g_variant_assert_invariant (source);
             }
         }
 
       gvs.type = value->type;
-      gvs.size = value->contents.large.size;
-      gvs.data = value->contents.large.data;
+      gvs.size = value->contents.serialised.size;
+      gvs.data = value->contents.serialised.data;
       break;
 
     default:
