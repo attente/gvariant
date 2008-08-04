@@ -1126,7 +1126,8 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
     case G_VARIANT_TYPE_CLASS_VARIANT:
       if (builder->offset < 1)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_FEW,
                        "a variant must contain exactly one value");
           return FALSE;
         }
@@ -1135,7 +1136,8 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
     case G_VARIANT_TYPE_CLASS_ARRAY:
       if (builder->type == NULL && builder->offset == 0)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_INFER,
                        "unable to infer type for empty array");
           return FALSE;
         }
@@ -1144,7 +1146,8 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
     case G_VARIANT_TYPE_CLASS_MAYBE:
       if (builder->type == NULL && builder->offset == 0)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_INFER,
                        "unable to infer type for maybe with no value");
           return FALSE;
         }
@@ -1153,7 +1156,8 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       if (builder->offset < 2)
         {
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_FEW,
                        "a dictionary entry must have a key and a value");
           return FALSE;
         }
@@ -1165,7 +1169,8 @@ g_variant_builder_check_end (GVariantBuilder  *builder,
           gchar *type_string;
 
           type_string = g_variant_type_dup_string (builder->type);
-          g_set_error (error, 0, 0,
+          g_set_error (error, G_VARIANT_BUILDER_ERROR,
+                       G_VARIANT_BUILDER_ERROR_TOO_FEW,
                        "a structure of type %s must contain %d children "
                        "but only %d have been given", type_string,
                        g_variant_type_n_items (builder->type),
