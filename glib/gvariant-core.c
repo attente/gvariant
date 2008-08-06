@@ -85,6 +85,7 @@ struct OPAQUE_TYPE__GVariant
 #define STATE_VISIBLE           0x80
 #define STATE_SOURCE_NATIVE     0x100
 #define STATE_NOTIFY            0x200
+#define STATE_ZERO              0x400
 #define STATE_LOCKED            0x80000000
 
 static void g_variant_fill_gvs (GVariantSerialised *, gpointer);
@@ -574,14 +575,20 @@ g_variant_from_gvs (GVariantSerialised  gvs,
 
   if (gvs.data == NULL)
     {
-      g_assert (!(source->state & STATE_TRUSTED));
-      g_assert (!trusted);
+      if (gvs.size)
+        {
+          g_assert (!(source->state & STATE_TRUSTED));
+          g_assert (!trusted);
+
+          new->contents.serialised.data = g_variant_get_zeros (gvs.size);
+        }
+      else
+        new->contents.serialised.data = NULL;
 
       new->contents.serialised.source = NULL;
-      new->contents.serialised.data = g_variant_get_zeros (gvs.size);
       new->size = gvs.size;
 
-      new->state |= STATE_INDEPENDENT | STATE_NATIVE;
+      new->state |= STATE_INDEPENDENT | STATE_NATIVE | STATE_ZERO;
 
       if (gvs.size)
         new->state |= STATE_TRUSTED;
@@ -889,7 +896,8 @@ g_variant_unref (GVariant *value)
   if (g_atomic_int_dec_and_test (&value->ref_count))
     {
       /* free the type info */
-      g_variant_type_info_unref (value->type);
+      if (value->type)
+        g_variant_type_info_unref (value->type);
 
       /* free the data */
       if (value->state & STATE_SERIALISED)
@@ -898,7 +906,8 @@ g_variant_unref (GVariant *value)
               !(value->state & STATE_INDEPENDENT))
             g_variant_unref (value->contents.serialised.source);
 
-          if (value->state & STATE_INDEPENDENT)
+          if (value->state & STATE_INDEPENDENT &&
+              !(value->state & STATE_ZERO))
             g_slice_free1 (value->size, value->contents.serialised.data);
         }
       else
