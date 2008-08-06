@@ -361,7 +361,7 @@ g_variant_try_state (GVariant *value,
 {
   if ((value->state & state) == state)
     return TRUE;
-
+  
   g_variant_lock (value);
 
   if ((value->state & state) != state)
@@ -379,8 +379,7 @@ g_variant_try_state (GVariant *value,
             for (t = s->transitions; t->required_states != STATE_LOCKED; t++)
               if ((t->forbidden_states & value->state) == 0 &&
                   (t->required_states & value->state) == t->required_states)
-                if (state_table[state].enable == NULL ||
-                    state_table[state].enable (value))
+                if (s->enable == NULL || s->enable (value))
                   {
                     value->state |= s->state;
                     goto ok;
@@ -397,8 +396,7 @@ g_variant_try_state (GVariant *value,
                 if (value->state & s->state)
                   goto ok;
 
-                else if (state_table[state].enable == NULL ||
-                         state_table[state].enable (value))
+                else if (s->enable == NULL || s->enable (value))
                   {
                     value->state |= s->state;
                     goto ok;
@@ -490,16 +488,7 @@ g_variant_get_gvs (GVariant  *value,
   /* not independent implies not renormalised */
   if (g_variant_is_out_of_state (value, STATE_INDEPENDENT))
     {
-      gvs.data = value->contents.serialised.data;
-      gvs.size = value->size;
-
-      if (source)
-        *source = g_variant_ref (value);
-
-      g_variant_unlock (value);
-    }
-  else if (g_variant_is_out_of_state (value, STATE_RENORMALISED))
-    {
+      /* dependent */
       gvs.data = value->contents.serialised.data;
       gvs.size = value->size;
 
@@ -508,8 +497,20 @@ g_variant_get_gvs (GVariant  *value,
 
       g_variant_unlock (value);
     }
+  else if (g_variant_is_out_of_state (value, STATE_RENORMALISED))
+    {
+      /* independent */
+      gvs.data = value->contents.serialised.data;
+      gvs.size = value->size;
+
+      if (source)
+        *source = g_variant_ref (value);
+
+      g_variant_unlock (value);
+    }
   else
     {
+      /* renormalised */
       gvs.data = value->contents.serialised.source->contents.serialised.data;
       gvs.size = value->contents.serialised.source->size;
 
@@ -993,7 +994,8 @@ g_variant_new_tree (const GVariantType  *type,
 {
   GVariant *new;
 
-  new = g_variant_alloc (g_variant_type_info_get (type), STATE_INDEPENDENT);
+  new = g_variant_alloc (g_variant_type_info_get (type),
+                         STATE_INDEPENDENT | STATE_NATIVE);
 
   new->contents.tree.children = children;
   new->contents.tree.n_children = n_children;
