@@ -165,7 +165,7 @@ g_variant_serialiser_sub (GVariantSerialised  container,
 {
   GVariantSerialised result = { g_variant_type_info_ref (type) };
 
-  if G_LIKELY (start <= end && end <= container.size)
+  if (start < end && end <= container.size)
     {
       result.data = &container.data[start];
       result.size = end - start;
@@ -252,6 +252,22 @@ g_variant_serialised_n_children (GVariantSerialised container)
   return 0;
 }
 
+/*
+ * g_variant_serialised_get_child:
+ * @container: a #GVariantSerialised
+ * @index: the index of the child to fetch
+ * @returns: a #GVariantSerialised for the child
+ *
+ * Extracts a child from a serialised container.
+ *
+ * It is an error to call this function with an index out of bounds.
+ *
+ * If the result .data == %NULL and .size > 0 then there has been an
+ * error extracting the requested fixed-sized value.  This number of
+ * zero bytes needs to be allocated instead.
+ *
+ * This function will never return .size == 0 and .data != NULL.
+ */
 GVariantSerialised
 g_variant_serialised_get_child (GVariantSerialised container,
                                 gsize              index)
@@ -306,20 +322,25 @@ g_variant_serialised_get_child (GVariantSerialised container,
             }
         }
 
+        if (value.size == 0)
+          value.data = NULL;
+
         return value;
       }
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
       {
-        GVariantTypeInfo *type;
+        GVariantSerialised child;
         gssize size;
 
-        type = g_variant_type_info_element (container.type);
+        child.type = g_variant_type_info_element (container.type);
+        g_variant_type_info_ref (child.type);
+        child.data = container.data;
 
         if G_UNLIKELY (container.size == 0 || index > 0)
           break;
 
-        g_variant_type_info_query (type, NULL, &size);
+        g_variant_type_info_query (child.type, NULL, &size);
 
         if (size > 0)
           {
@@ -329,13 +350,14 @@ g_variant_serialised_get_child (GVariantSerialised container,
             if G_UNLIKELY (container.size != size)
               break;
 
-            /* fixed size: do nothing */
+            /* fixed size: child fills entire container */
+            child.size = container.size;
           }
         else
           /* variable size: remove trailing '\0' marker */
-          container.size -= 1;
+          child.size = container.size - 1;
 
-        return g_variant_serialiser_sub (container, type, 0, container.size);
+        return child;
       }
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
