@@ -39,7 +39,7 @@ void                            g_variant_store                         (GVarian
 gconstpointer                   g_variant_get_data                      (GVariant           *value);
 gsize                           g_variant_get_size                      (GVariant           *value);
 
-GVariant                       *g_variant_normalise                     (GVariant           *value);
+void                            g_variant_normalise                     (GVariant           *value);
 
 #pragma GCC visibility pop
 
