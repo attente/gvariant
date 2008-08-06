@@ -137,32 +137,6 @@ g_variant_serialiser_array_length (GVariantSerialised  container,
 
   return TRUE;
 }
-/*
-static void
-g_variant_serialiser_sanity_check (GVariantSerialised container,
-                                   gsize              offset,
-                                   gsize              n_items)
-{
-  check_cases (0,
-               {
-                 if (offset)
-                   {
-                     g_error ("when serialising a zero-size container, %d "
-                              "bytes were written", offset);
-                   }
-               },
-               {
-                 if (offset + n_items * offset_size != container.size)
-                   {
-                     g_error ("when serialising a container of size %d "
-                              "(offset size %d) %d bytes were used by "
-                              "children and %d bytes by %d offsets (total "
-                              "of %d bytes).", container.size, offset_size,
-                              offset, n_items * offset_size, n_items,
-                              offset + n_items * offset_size);
-                   }
-               },);
-}*/
 
 static gsize
 g_variant_serialiser_struct_end (GVariantSerialised container,
@@ -286,6 +260,55 @@ g_variant_serialised_get_child (GVariantSerialised container,
 
   switch (g_variant_type_info_get_type_class (container.type))
   {
+    case G_VARIANT_TYPE_CLASS_VARIANT:
+      {
+        GVariantSerialised value = { NULL, container.data, container.size };
+
+        if G_UNLIKELY (index > 0)
+          break;
+
+        /* find '\0' character */
+        while (value.size && container.data[--value.size]);
+
+        /* the loop can finish for two reasons.
+         * 1) we found a '\0'.   ((good.))
+         * 2) we hit the start.  ((only good if there's a '\0' there))
+         */
+        if (container.data[value.size] == '\0')
+          {
+            gchar *str = (gchar *) container.data + value.size + 1;
+
+            /* in the case that we're accessing a shared memory buffer,
+             * someone could change the  string under us and cause us
+             * to access out-of-bounds memory.
+             *
+             * if we carefully make our own copy then we avoid that.
+             */
+            str = g_strndup (str, container.size - value.size - 1);
+            if (g_variant_type_string_is_valid (str))
+              value.type = g_variant_type_info_get (G_VARIANT_TYPE (str));
+
+            g_free (str);
+          }
+
+        if G_UNLIKELY (value.type == NULL)
+          return g_variant_serialiser_error (container, NULL);
+
+        {
+          gssize fixed_size;
+
+          g_variant_type_info_query (value.type, NULL, &fixed_size);
+
+          if G_UNLIKELY (fixed_size > 0 && value.size != fixed_size)
+            {
+              value.size = fixed_size;
+              value.data = NULL;
+            }
+        }
+
+        return value;
+      }
+
     case G_VARIANT_TYPE_CLASS_MAYBE:
       {
         GVariantTypeInfo *type;
@@ -300,6 +323,9 @@ g_variant_serialised_get_child (GVariantSerialised container,
 
         if (size > 0)
           {
+            /* if this doesn't match then we are considered
+             * 'Nothing', so there is no child to get...
+             */
             if G_UNLIKELY (container.size != size)
               break;
 
@@ -392,51 +418,6 @@ g_variant_serialised_get_child (GVariantSerialised container,
 
         return g_variant_serialiser_sub (container, info->type, start, end);
       }
-
-    case G_VARIANT_TYPE_CLASS_VARIANT:
-      {
-        GVariantSerialised result;
-        GVariantTypeInfo *info;
-        gchar *type_string;
-        gssize expected;
-        gsize end;
-
-        if G_UNLIKELY (index != 0)
-          break;
-
-        /* we need to string copy here just incase someone changes the
-         * data under us while we're reading (think: shared memory)
-         */
-        end = container.size;
-        while (end && container.data[--end]);
-
-        if (container.data[end] == '\0')
-          type_string = g_strndup ((const gchar *) &container.data[end + 1],
-                                   container.size - (end + 1));
-        else
-          type_string = NULL;
-
-        g_print ("i see '%s'\n", type_string);
-
-        if (type_string && g_variant_type_string_is_valid (type_string))
-          info = g_variant_type_info_get (G_VARIANT_TYPE (type_string));
-        else
-          info = g_variant_type_info_get (G_VARIANT_TYPE_UNIT);
-
-        g_free (type_string);
-
-        g_variant_type_info_query (info, NULL, &expected);
-
-        if (expected >= 0 && end != expected)
-          result = g_variant_serialiser_error (container, info);
-        else
-          result = g_variant_serialiser_sub (container, info, 0, end);
-
-        g_variant_type_info_unref (info);
-
-        return result;
-      }
-
     default:
       g_assert_not_reached ();
   }
