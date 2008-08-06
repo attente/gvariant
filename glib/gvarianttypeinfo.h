@@ -19,10 +19,8 @@ typedef struct
 {
   GVariantTypeInfo *type;
 
-  gsize index, plus;
-  gint8 and, or;
-
-  gssize size;
+  gsize i, a;
+  gint8 b, c;
 } GVariantMemberInfo;
 
 #define STRUCT_MEMBER_LAST         (-1)
@@ -31,6 +29,7 @@ typedef struct
 /* query */
 const GVariantType             *g_variant_type_info_get_type            (GVariantTypeInfo   *typeinfo);
 GVariantTypeClass               g_variant_type_info_get_type_class      (GVariantTypeInfo   *typeinfo);
+const gchar                    *g_variant_type_info_get_string          (GVariantTypeInfo   *typeinfo);
 
 void                            g_variant_type_info_query               (GVariantTypeInfo   *typeinfo,
                                                                          guint              *alignment,

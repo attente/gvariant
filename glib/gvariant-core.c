@@ -521,10 +521,21 @@ g_variant_get_child (GVariant *value,
        * pointer.  if not, then a size of zero is valid.
        */
       g_variant_type_info_query (gvs.type, NULL, &size);
+
       child = g_variant_alloc (G_VARIANT_SERIALISED, gvs.type);
       child->contents.serialised.source = NULL;
-      child->contents.serialised.data = g_slice_alloc0 (size);
-      child->contents.serialised.size = size;
+
+      if (size >= 0)
+        {
+          child->contents.serialised.data = g_slice_alloc0 (size);
+          child->contents.serialised.size = size;
+        }
+      else
+        {
+          child->contents.serialised.data = NULL;
+          child->contents.serialised.size = 0;
+        }
+
     }
   else
     /* no error */

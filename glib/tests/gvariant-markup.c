@@ -96,7 +96,7 @@ check_verbatim (gconstpointer data)
   else
     g_assert (error == NULL);
 
-  //g_variant_flatten (value);
+  g_variant_flatten (value);
 
   out = g_variant_markup_print (value, NULL, FALSE, 0, 0);
   g_assert_cmpstr (markup, ==, out->str);

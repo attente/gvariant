@@ -45,6 +45,14 @@ g_variant_type_info_get_type (GVariantTypeInfo *info)
   return info->type;
 }
 
+const gchar *
+g_variant_type_info_get_string (GVariantTypeInfo *info)
+{
+  g_assert_cmpint (info->ref_count, >, 0);
+
+  return (const gchar *) info->type;
+}
+
 GVariantTypeClass
 g_variant_type_info_get_type_class (GVariantTypeInfo *info)
 {
@@ -138,133 +146,130 @@ struct_info_free (GVariantTypeInfo *info)
   g_slice_free (StructInfo, struct_info);
 }
 
+static void
+struct_allocate_members (const GVariantType  *type,
+                         GVariantMemberInfo **members,
+                         gsize               *n_members)
+{
+  const GVariantType *item_type;
+  gsize i = 0;
+
+  *n_members = g_variant_type_n_items (type);
+  *members = g_slice_alloc (sizeof (GVariantMemberInfo) * *n_members);
+
+  item_type = g_variant_type_first (type);
+  while (item_type)
+    {
+      (*members)[i++].type = g_variant_type_info_get (item_type);
+      item_type = g_variant_type_next (item_type);
+    }
+
+  g_assert (i == *n_members);
+}
+
+static gboolean
+struct_get_item (StructInfo         *info,
+                 GVariantMemberInfo *item,
+                 gsize              *d,
+                 gsize              *e)
+{
+  if (&info->members[info->n_members] == item)
+    return FALSE;
+
+  *d = item->type->alignment;
+  *e = item->type->fixed_size;
+  return TRUE;
+}
+
+static void
+struct_table_append (GVariantMemberInfo **items,
+                     gsize                i,
+                     gsize                a,
+                     gsize                b,
+                     gsize                c)
+{
+  GVariantMemberInfo *item = (*items)++;
+
+  /* §4.1.3 */
+  a += ~b & c;
+  c &= b;
+
+  /* XXX not documented anywhere */
+  a += b;
+  b = ~b;
+
+  item->i = i;
+  item->a = a;
+  item->b = b;
+  item->c = c;
+}
+
+static gsize
+struct_align (gsize offset,
+              guint alignment)
+{
+  return offset + ((-offset) & alignment);
+}
+
+static void
+struct_generate_table (StructInfo *info)
+{
+  GVariantMemberInfo *items = info->members;
+  gsize i = -1, a = 0, b = 0, c = 0, d, e;
+
+  /* §4.1.2 */
+  while (struct_get_item (info, items, &d, &e))
+    {
+      if (d <= b)
+        c = struct_align (c, d);
+      else
+        a += struct_align (c, b), b = d, c = 0;
+
+      struct_table_append (&items, i, a, b, c);
+
+      if (e == -1)
+        i++, a = b = c = 0;
+      else
+        c += e;
+    }
+}
+
+static void
+struct_set_self_info (StructInfo *info)
+{
+  if (info->n_members > 0)
+    {
+      GVariantMemberInfo *m;
+
+      info->self.alignment = 0;
+      for (m = info->members; m < &info->members[info->n_members]; m++)
+        info->self.alignment |= m->type->alignment;
+      m--;
+
+      if (m->i == -1 && m->type->fixed_size >= 0)
+        info->self.fixed_size = struct_align (((m->a & m->b) | m->c) + m->type->fixed_size,
+                                  info->self.alignment);
+      else
+        info->self.fixed_size = -1;
+    }
+  else
+    {
+      info->self.alignment = 0;
+      info->self.fixed_size = 0;
+    }
+}
+
 static GVariantTypeInfo *
 struct_info_new (const GVariantType *type)
 {
   StructInfo *info;
-  const GVariantType *item;
-  guint alignment;
-  gboolean fixed;
-  guint aligned;
-  gsize before;
-  gsize after;
-  gsize index;
-  gint i;
-
-  alignment = 0;
-  fixed = TRUE;
-
-  aligned = 0;
-  before = 0;
-  after = 0;
-
-  index = -1;
-  i = 0;
 
   info = g_slice_new (StructInfo);
   info->self.info_class = STRUCT_INFO_CLASS;
 
-  if (!g_variant_type_is_in_class (type, G_VARIANT_TYPE_CLASS_DICT_ENTRY))
-    info->n_members = g_variant_type_n_items (type);
-  else
-    info->n_members = 2;
-  info->members = g_slice_alloc (sizeof (GVariantMemberInfo) *
-                                 info->n_members);
-
-  item = g_variant_type_first (type);
-  while (item)
-    {
-      gssize item_fixed_size;
-      guint item_alignment;
-
-      info->members[i].type = g_variant_type_info_get (item);
-      item_fixed_size = info->members[i].type->fixed_size;
-      item_alignment = info->members[i].type->alignment;
-
-      alignment |= item_alignment;
-
-      /* align for the start of the item */
-      if (item_alignment > aligned)
-        {
-          before += after + ((-after) & aligned) + item_alignment;
-          aligned = item_alignment;
-          after = 0;
-        }
-      else
-        after += (-after) & item_alignment;
-
-      /* from a mathematical standpoint, the following two lines do
-       * exactly nothing.  they ensure that 'after' is always less
-       * than 8, however, which means that storing it uses less
-       * memory.
-       *
-       * ultimately we will perform the following calculation:
-       *
-       *    (n + before) & ~aligned + after     (for some 'n')
-       *
-       * equivalently, we can shift the high order bits from 'after'
-       * into 'before' and perform the same calculation with the same
-       * result:
-       *
-       *    (n + before') & ~aligned + after'
-       *      where:
-       *        before' = after & ~aligned
-       *        after' = after & aligned
-       *
-       * which because after' only contains bits not in ~aligned, is
-       * actually the same as:
-       *
-       *    (n + before') & ~aligned | after'
-       */
-      before += after & ~aligned;
-      after &= aligned;
-
-      /* store the starting information */
-      info->members[i].index = index;
-      info->members[i].plus = before;
-      info->members[i].and = ~aligned;
-      info->members[i].or = after;
-
-      /* what is the size of the item? */
-      if (item_fixed_size < 0)
-        {
-          /* variable width item */
-          info->members[i].size = STRUCT_MEMBER_VARIABLE;
-
-          fixed = FALSE;
-          aligned = 0;
-          before = 0;
-          after = 0;
-          index++;
-        }
-      else
-        {
-          /* fixed width item */
-          info->members[i].size = item_fixed_size;
-          after += item_fixed_size;
-        }
-
-      item = g_variant_type_next (item);
-      i++;
-    }
-
-  /* variable-size offset is not stored for last item */
-  if (i && info->members[i - 1].size == STRUCT_MEMBER_VARIABLE)
-    info->members[i - 1].size = STRUCT_MEMBER_LAST;
-
-  info->self.alignment = alignment;
-  if (fixed)
-    {
-      /* we have not shifted 'after' bits into 'before' here,
-       * so we must _add_ since there might be overlap.
-       */
-      info->self.fixed_size = ((0 + before) & (~aligned)) + after;
-      info->self.fixed_size += (-info->self.fixed_size) & alignment;
-    }
-  else
-    info->self.fixed_size = -1;
-
-  g_assert_cmpint (info->n_members, ==, i);
+  struct_allocate_members (type, &info->members, &info->n_members); 
+  struct_generate_table (info);
+  struct_set_self_info (info);
 
   return (GVariantTypeInfo *) info;
 }
