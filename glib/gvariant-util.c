@@ -1516,7 +1516,7 @@ g_variant_dump_data (GVariant *value)
   while (data < end || (i & 15))
     {
       if ((i & 15) == (((gsize) data) & 15) && data < end)
-        g_sprintf (&row[3 * (i & 15) + (i & 8)/8], "%02x ", *data++);
+        g_sprintf (&row[3 * (i & 15) + (i & 8)/8], "%02x  ", *data++);
       else
         g_sprintf (&row[3 * (i & 15) + (i & 8)/8], "    ");
 

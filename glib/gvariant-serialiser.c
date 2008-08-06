@@ -20,6 +20,7 @@
 #else
 # define GSIZE_TO_LE GUINT64_TO_LE
 #endif
+#define GSIZE_FROM_LE GSIZE_TO_LE
 #endif
 
 static gsize
@@ -362,49 +363,71 @@ g_variant_serialised_get_child (GVariantSerialised container,
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
       {
-        GVariantTypeInfo *type;
+        GVariantSerialised child;
+        gssize fixed_size;
         guint alignment;
-        gssize size;
 
-        type = g_variant_type_info_element (container.type);
-        g_variant_type_info_query (type, &alignment, &size);
+        child.type = g_variant_type_info_element (container.type);
+        g_variant_type_info_ref (child.type);
 
-        if (size <= 0)
-          /* case where array contains variable-sized elements */
+        g_variant_type_info_query (child.type, &alignment, &fixed_size);
+
+        if (fixed_size > 0)
           {
-            gsize start = 0, end;
-            gsize length;
+            if G_UNLIKELY (container.size % fixed_size != 0 ||
+                           fixed_size * (index + 1) > container.size)
+              break;
+           
+            child.data = container.data + fixed_size * index;
+            child.size = fixed_size; 
 
-            if G_UNLIKELY (!g_variant_serialiser_array_length (container,
-                                                               &length))
+            return child;
+          }
+
+        else
+          {
+            gsize boundary = 0, start = 0, end = 0;
+            guint offset_size;
+
+            offset_size = g_variant_serialiser_offset_size (container);
+            memcpy (&boundary,
+                    container.data + container.size - offset_size,
+                    offset_size);
+            boundary = GSIZE_FROM_LE (boundary);
+            
+            if G_UNLIKELY (boundary > container.size ||
+                          (container.size - boundary) % offset_size ||
+                          boundary + index * offset_size >= container.size)
               break;
 
-            if G_UNLIKELY (index >= length)
-              break;
+            if (index)
+              {
+                memcpy (&start,
+                        container.data + boundary + (index - 1) * offset_size,
+                        offset_size);
+                start = GSIZE_FROM_LE (start);
+              }
 
-            if (index &&
-               !g_variant_serialiser_dereference (container,
-                                                  length - index, &start))
-              return g_variant_serialiser_error (container, type);
-
-            if (!g_variant_serialiser_dereference (container,
-                                                   length - index - 1, &end))
-              return g_variant_serialiser_error (container, type);
+            memcpy (&end,
+                    container.data + boundary + index * offset_size,
+                    offset_size);
+            end = GSIZE_FROM_LE (end);
 
             start += (-start) & alignment;
 
-            return g_variant_serialiser_sub (container, type, start, end);
+            if (start < end && end <= container.size)
+              {
+                child.data = container.data + start;
+                child.size = end - start;
+              }
+            else
+              {
+                child.data = NULL;
+                child.size = 0;
+              }
           }
-        else
-          /* case where array contains fixed-sized elements */
-          {
-            if G_UNLIKELY (container.size % size > 0 ||
-                            size * (index + 1) > container.size)
-              break;
 
-            return g_variant_serialiser_sub (container, type,
-                                             size * index, size * (index + 1));
-          }
+        return child;
       }
 
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
