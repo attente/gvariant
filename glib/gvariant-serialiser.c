@@ -629,13 +629,36 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
     case G_VARIANT_TYPE_CLASS_VARIANT:
       {
         GVariantSerialised child = {};
+        const gchar *type_string;
 
         g_assert_cmpint (n_children, ==, 1);
         gvs_filler (&child, children[0]);
 
-        return child.size + 1 +
-               g_variant_type_get_string_length (
-                 g_variant_type_info_get_type (child.type));
+        type_string = g_variant_type_info_get_string (child.type);
+
+        return child.size + 1 + strlen (type_string);
+      }
+
+    case G_VARIANT_TYPE_CLASS_MAYBE:
+      {
+        GVariantSerialised child = { g_variant_type_info_element (type) };
+        gssize fixed_size;
+
+        g_assert_cmpint (n_children, <=, 1);
+
+        if (n_children == 0)
+          return 0;
+
+        gvs_filler (&child, children[0]);
+        g_variant_type_info_query (child.type, NULL, &fixed_size);
+
+        if (fixed_size >= 0)
+          g_assert (child.size == fixed_size);
+
+        if (fixed_size <= 0)
+          child.size++;
+
+        return child.size;
       }
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
@@ -664,7 +687,8 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
                 gvs_filler (&child, children[i]);
                 g_assert (child.type == elem_type);
 
-                offset += (-offset) & alignment;
+                if (child.size)
+                  offset += (-offset) & alignment;
                 offset += child.size;
               }
 
@@ -674,28 +698,6 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
           }
         else
           return fixed_size * n_children;
-      }
-
-    case G_VARIANT_TYPE_CLASS_MAYBE:
-      {
-        GVariantSerialised child = {};
-        GVariantTypeInfo *elem_type;
-        gssize fixed_size;
-
-        g_assert_cmpint (n_children, <=, 1);
-
-        if (n_children == 0)
-          return 0;
-
-        elem_type = g_variant_type_info_element (type);
-        g_variant_type_info_query (elem_type, NULL, &fixed_size);
-        gvs_filler (&child, children[0]);
-        g_assert (child.type == elem_type);
-
-        if (fixed_size > 0)
-          return fixed_size;
-        else
-          return child.size + 1;
       }
 
     case G_VARIANT_TYPE_CLASS_STRUCT:
