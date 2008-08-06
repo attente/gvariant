@@ -472,7 +472,7 @@ g_variant_new_variant (GVariant *value)
 
   return g_variant_new_tree (G_VARIANT_TYPE_VARIANT,
                              children, 1,
-                             g_variant_is_normalised (value));
+                             g_variant_is_trusted (value));
 }
 
 /**
@@ -839,7 +839,7 @@ g_variant_builder_add_value (GVariantBuilder *builder,
   if G_UNLIKELY (!g_variant_builder_check_add_value (builder, value, &error))
     g_error ("g_variant_builder_add_value: %s", error->message);
 
-  builder->trusted &= g_variant_is_normalised (value);
+  builder->trusted &= g_variant_is_trusted (value);
 
   if (builder->expected &&
       (builder->class == G_VARIANT_TYPE_CLASS_STRUCT ||

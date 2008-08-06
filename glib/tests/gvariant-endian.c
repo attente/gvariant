@@ -23,7 +23,7 @@ test_byteswap (void)
   GVariant *value;
   GString *string;
 
-  value = g_variant_load (NULL, data, sizeof data, G_VARIANT_BYTESWAP_LAZY);
+  value = g_variant_load (NULL, data, sizeof data, G_BIG_ENDIAN | G_VARIANT_LAZY_BYTESWAP);
   string = g_variant_markup_print (value, NULL, FALSE, 0, 0);
   g_variant_unref (value);
 

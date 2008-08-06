@@ -17,12 +17,8 @@
 
 typedef enum
 {
-  G_VARIANT_TRUSTED             = 1,
-  G_VARIANT_BYTESWAP_NOW        = 2,
-  G_VARIANT_BYTESWAP_LAZY       = 4,
-  G_VARIANT_NORMALISE           = 8,
-
-  G_VARIANT_EMBED_SIGNATURE     = 16
+  G_VARIANT_TRUSTED             = 0x00010000,
+  G_VARIANT_LAZY_BYTESWAP       = 0x00020000,
 } GVariantFlags;
 
 GVariant                       *g_variant_load                          (const GVariantType *type,
@@ -33,6 +29,12 @@ GVariant                       *g_variant_from_slice                    (const G
                                                                          gpointer            slice,
                                                                          gsize               size,
                                                                          GVariantFlags       flags);
+GVariant                       *g_variant_from_data                     (const GVariantType *type,
+                                                                         gconstpointer       data,
+                                                                         gsize               size,
+                                                                         GVariantFlags       flags,
+                                                                         GDestroyNotify      notify,
+                                                                         gpointer            user_data);
 
 void                            g_variant_store                         (GVariant           *value,
                                                                          gpointer            data);

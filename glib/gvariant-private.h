@@ -21,7 +21,7 @@ GVariant                       *g_variant_new_tree                      (const G
                                                                          gboolean             trusted);
 void                            g_variant_ensure_native_endian          (GVariant            *value);
 void                            g_variant_assert_invariant              (GVariant            *value);
-gboolean                        g_variant_is_normalised                 (GVariant            *value);
+gboolean                        g_variant_is_trusted                    (GVariant            *value);
 GVariant                       *g_variant_ensure_floating               (GVariant            *value);
 void                            g_variant_dump_data                     (GVariant            *value);
 

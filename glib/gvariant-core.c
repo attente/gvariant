@@ -25,7 +25,7 @@
  * destroyed.  A #GVariant can not contain a pointer.
  *
  * Facilities exist for serialising the value of a #GVariant into a
- * byte stream.  A #GVariant can be sent over the bus or be saved to
+ * byte sequence.  A #GVariant can be sent over the bus or be saved to
  * disk.  Additionally, #GVariant is used as the basis of the
  * #GSettings persistent storage system.
  **/
@@ -35,14 +35,6 @@
 
 #include <string.h>
 #include <glib.h>
-
-typedef enum
-{
-  G_VARIANT_SERIALISED,
-  G_VARIANT_RENORMALISED,
-  G_VARIANT_TREE,
-  G_VARIANT_NOTIFY
-} GVariantRepresentation;
 
 /**
  * GVariant:
@@ -74,22 +66,28 @@ struct OPAQUE_TYPE__GVariant
   } contents;
 
   gsize size;
-
-  GVariantRepresentation representation;
   GVariantTypeInfo *type;
-
-  GStaticMutex lock;
-
-  gboolean native_endian;
-  gboolean trusted;
   gboolean floating;
-
+  GStaticMutex lock;
   guint state;
-
   gint ref_count;
 };
 
 #define check g_variant_assert_invariant
+
+#define STATE_NATIVE            0x01
+#define STATE_TRUSTED           0x02
+#define STATE_SERIALISED        0x04
+#define STATE_SIZE_KNOWN        0x08
+#define STATE_RENORMALISED      0x10
+#define STATE_FIXED_SIZE        0x20
+#define STATE_INDEPENDENT       0x40
+#define STATE_VISIBLE           0x80
+#define STATE_SOURCE_NATIVE     0x100
+#define STATE_NOTIFY            0x200
+#define STATE_LOCKED            0x80000000
+
+static void g_variant_fill_gvs (GVariantSerialised *, gpointer);
 
 static void
 g_variant_lock (GVariant *value)
@@ -102,434 +100,6 @@ g_variant_unlock (GVariant *value)
 {
   g_static_mutex_unlock (&value->lock);
 }
-
-/*
- * g_variant_apply_flags:
- * @value: a fresh #GVariant instance
- * @flags: various load flags
- *
- * This function is the common code used to apply flags (normalise,
- * byteswap, etc) to fresh #GVariant instances created using one of
- * the load functions.
- */
-static GVariant *
-g_variant_apply_flags (GVariant      *value,
-                       GVariantFlags  flags)
-{
-  /* why normalise if it's already trusted? */
-  g_assert (!((flags & G_VARIANT_NORMALISE) &&
-              (flags & G_VARIANT_TRUSTED)));
-
-  if (flags & G_VARIANT_NORMALISE)
-    {
-      value->trusted = FALSE;
-      //XXX value = g_variant_normalise (value);
-      g_assert (value->trusted);
-    }
-
-  else if (flags & G_VARIANT_TRUSTED)
-    value->trusted = TRUE;
-
-  else
-    value->trusted = FALSE;
-
-  /* can't byteswap both now and later... */
-  g_assert (!((flags & G_VARIANT_BYTESWAP_NOW) &&
-              (flags & G_VARIANT_BYTESWAP_LAZY)));
-
-  /* always byteswap the little ones */
-  if (flags & G_VARIANT_BYTESWAP_NOW)
-    {
-      value->native_endian = FALSE;
-      g_variant_ensure_native_endian (value);
-      g_assert (value->native_endian);
-    }
-
-  else if (flags & G_VARIANT_BYTESWAP_LAZY)
-    /* do it later */
-    value->native_endian = FALSE;
-
-  else
-    value->native_endian = TRUE;
-
-  check (value);
-
-  return value;
-}
-
-/**
- * g_variant_unref:
- * @value: a #GVariant
- *
- * Decreases the reference count of @variant.  When its reference
- * count drops to 0, the memory used by the variant is freed.
- **/
-void
-g_variant_unref (GVariant *value)
-{
-  check (value);
-
-  if (g_atomic_int_dec_and_test (&value->ref_count))
-    {
-      /* free the type info */
-      g_variant_type_info_unref (value->type);
-
-      /* free the data */
-      switch (value->representation)
-      {
-        case G_VARIANT_RENORMALISED:
-        case G_VARIANT_SERIALISED:
-          if (value->contents.serialised.source)
-            g_variant_unref (value->contents.serialised.source);
-          else
-            g_slice_free1 (value->size, value->contents.serialised.data);
-          break;
-
-        case G_VARIANT_TREE:
-          {
-            GVariant **children;
-            gsize n_children;
-            gsize i;
-
-            children = value->contents.tree.children;
-            n_children = value->contents.tree.n_children;
-
-            for (i = 0; i < n_children; i++)
-              g_variant_unref (children[i]);
-
-            g_slice_free1 (sizeof (GVariant *) * n_children, children);
-          }
-          break;
-
-        case G_VARIANT_NOTIFY:
-          {
-            gpointer user_data;
-
-            user_data = value->contents.notify.user_data;
-            value->contents.notify.callback (user_data);
-
-            break;
-          }
-      }
-
-      /* free the structure itself */
-      g_slice_free (GVariant, value);
-    }
-}
-
-/**
- * g_variant_ref:
- * @value: a #GVariant
- * @returns: the same @variant
- *
- * Increases the reference count of @variant.
- **/
-GVariant *
-g_variant_ref (GVariant *value)
-{
-  check (value);
-
-  g_atomic_int_inc (&value->ref_count);
-
-  return value;
-}
-
-/**
- * g_variant_ref_sink:
- * @value: a #GVariant
- * @returns: the same @variant
- *
- * If @value is floating, mark it as no longer floating.  If it is not
- * floating, increase its reference count.
- **/
-GVariant *
-g_variant_ref_sink (GVariant *value)
-{
-  check (value);
-
-  g_variant_ref (value);
-  if (g_atomic_int_compare_and_exchange (&value->floating, 1, 0))
-    g_variant_unref (value);
-
-  return value;
-}
-
-GVariant *
-g_variant_ensure_floating (GVariant *value)
-{
-  check (value);
-
-  g_variant_ref_sink (value);
-
-  if (value->ref_count == 1)
-    /* it is exclusively ours */
-    {
-      value->floating = TRUE;
-
-      return value;
-    }
-  else
-    /* someone else has it too.  make our own. */
-    {
-      GVariant *new;
-
-      g_error ("not yet supported");
-      new = NULL;
-      g_variant_unref (value);
-
-      return new;
-    }
-}
-
-/* this is the only function that ever allocates a new GVariant structure.
- * g_variant_unref() is the only function that ever frees one.
- */
-static GVariant *
-g_variant_alloc (GVariantRepresentation  representation,
-                 GVariantTypeInfo       *type)
-{
-  GVariant *variant;
-
-  variant = g_slice_new (GVariant);
-  variant->ref_count = 1;
-  variant->representation = representation;
-  variant->type = type;
-  variant->floating = TRUE;
-  g_static_mutex_init (&variant->lock);
-
-  return variant;
-}
-
-/* private */
-GVariant *
-g_variant_new_tree (const GVariantType  *type,
-                    GVariant           **children,
-                    gsize                n_children,
-                    gboolean             trusted)
-{
-  GVariant *variant;
-
-  variant = g_variant_alloc (G_VARIANT_TREE, g_variant_type_info_get (type));
-  variant->contents.tree.children = children;
-  variant->contents.tree.n_children = n_children;
-  variant->size = -1;
-  variant->trusted = trusted;
-
-  check (variant);
-
-  return variant;
-}
-
-/**
- * g_variant_from_slice:
- * @type: the #GVariantType of the new variant
- * @slice: a pointer to a GSlice-allocated region
- * @size: the size of @slice
- * @flags: zero or more #GVariantLoadFlags
- * @returns: a new #GVariant instance
- *
- * Creates a #GVariant instance from a memory slice.  Ownership of the
- * memory slice is assumed.  This function allows efficiently creating
- * #GVariant instances with data that is, for example, read over a
- * socket.
- *
- * This function never fails.
- **/
-GVariant *
-g_variant_from_slice (const GVariantType *type,
-                      gpointer            slice,
-                      gsize               size,
-                      GVariantFlags       flags)
-{
-  GVariant *variant;
-
-  variant = g_variant_alloc (G_VARIANT_SERIALISED,
-                             g_variant_type_info_get (type));
-  variant->contents.serialised.source = NULL;
-  variant->contents.serialised.data = slice;
-  variant->size = size;
-
-  return g_variant_apply_flags (variant, flags);
-}
-
-static GVariant *
-g_variant_from_gvs (GVariantSerialised  gvs,
-                    GVariant           *source,
-                    gboolean            trusted)
-{
-  GVariant *value;
-
-  g_assert (source->representation == G_VARIANT_SERIALISED ||
-            source->representation == G_VARIANT_NOTIFY);
-
-  value = g_variant_alloc (G_VARIANT_SERIALISED, gvs.type);
-  value->contents.serialised.source = g_variant_ref (source);
-  value->size = gvs.size;
-  value->contents.serialised.data = gvs.data;
-  value->native_endian = source->native_endian;
-  value->trusted = trusted || source->trusted;
-
-  check (value);
-
-  return value;
-}
-
-/**
- * g_variant_get_type:
- * @value: a #GVariant
- * @returns: a #GVariantType
- *
- * Determines the type of @value.
- *
- * The return value is valid for the lifetime of @value and must not
- * be freed.
- */
-const GVariantType *
-g_variant_get_type (GVariant *value)
-{
-  check (value);
-
-  return g_variant_type_info_get_type (value->type);
-}
-
-/**
- * g_variant_load:
- * @type: the #GVariantType of the new variant
- * @data: the serialised #GVariant data to load
- * @size: the size of @data
- * @flags: zero or more #GVariantLoadFlags
- * @returns: a new #GVariant instance
- *
- * Creates a new #GVariant instance.  @data is copied.  For a more
- * efficient way to create #GVariant instances, see
- * g_variant_from_slice() or XXX.
- *
- * This function is O(n) in the size of @data.
- *
- * This function never fails.
- **/
-GVariant *
-g_variant_load (const GVariantType *type,
-                gconstpointer       data,
-                gsize               size,
-                GVariantFlags       flags)
-{
-  GVariantTypeInfo *type_info;
-  GVariant *value;
-  gpointer mydata;
-
-  if (type == NULL)
-    {
-      GVariant *variant;
-
-      variant = g_variant_load (G_VARIANT_TYPE_VARIANT, data, size, flags);
-      value = g_variant_get_child (variant, 0);
-      g_variant_unref (variant);
-
-      return value;
-    }
-
-  type_info = g_variant_type_info_get (type);
-
-  mydata = g_slice_alloc (size);
-
-  value = g_variant_alloc (G_VARIANT_SERIALISED, type_info);
-  value->contents.serialised.source = NULL;
-  value->contents.serialised.data = mydata;
-  value->size = size;
-
-  memcpy (mydata, data, size);
-
-  value->trusted = TRUE;
-
-  return g_variant_apply_flags (value, flags);
-}
-
-static void
-g_variant_fill_gvs (GVariantSerialised *serialised,
-                      gpointer            data);
-/*
- * g_variant_assert_invariant:
- * @value: a #GVariant instance to check
- *
- * This function asserts the class invariant on a #GVariant instance.
- * Any detected problems will result in an assertion failure.
- *
- * This function is potentially very slow.
- *
- * This function never fails.
- * TS
- */
-void
-g_variant_assert_invariant (GVariant *value)
-{
-  GVariantSerialised gvs;
-
-  g_assert (value != NULL);
-
-  g_variant_lock (value);
-
-  g_assert_cmpint (value->ref_count, >, 0);
-  g_assert (value->type != NULL);
-
-  switch (value->representation)
-  {
-    case G_VARIANT_TREE:
-      g_variant_unlock (value);
-      return;
-
-    case G_VARIANT_SERIALISED:
-      if (value->contents.serialised.source)
-        {
-          GVariant *source = value->contents.serialised.source;
-
-          g_assert (source->native_endian || !value->native_endian);
-          g_assert (source->representation == G_VARIANT_SERIALISED ||
-                    source->representation == G_VARIANT_NOTIFY);
-
-          if (source->representation == G_VARIANT_SERIALISED)
-            {
-              /* no grandparents */
-              g_assert (source->contents.serialised.source == NULL);
-              g_variant_assert_invariant (source);
-            }
-        }
-
-      gvs.type = value->type;
-      gvs.size = value->size;
-      gvs.data = value->contents.serialised.data;
-      break;
-
-    case G_VARIANT_RENORMALISED:
-      g_assert (value->trusted == FALSE);
-      g_assert (value->contents.serialised.source != NULL);
-      g_assert (value->contents.serialised.source->representation ==
-                G_VARIANT_SERIALISED);
-      g_variant_assert_invariant (value->contents.serialised.source);
-
-      gvs.type = value->type;
-      gvs.size = value->size;
-      gvs.data = value->contents.serialised.data;
-
-    default:
-      g_assert_not_reached ();
-  }
-
-  g_variant_serialised_assert_invariant (gvs);
-  g_variant_unlock (value);
-}
-
-#define STATE_NATIVE            0x01
-#define STATE_TRUSTED           0x02
-#define STATE_SERIALISED        0x04
-#define STATE_SIZE_KNOWN        0x08
-#define STATE_RENORMALISED      0x10
-#define STATE_FIXED_SIZE        0x20
-#define STATE_INDEPENDENT       0x40
-#define STATE_VISIBLE           0x80
-#define STATE_SOURCE_NATIVE     0x100
-#define STATE_LOCKED            0x80000000
-
 
 static gboolean
 g_variant_transition_size_known (GVariant *value)
@@ -779,7 +349,10 @@ struct state state_table[] =
 
   { STATE_SOURCE_NATIVE, NULL, g_variant_transition_source_native,
     { { STATE_SERIALISED, STATE_INDEPENDENT                     },
-      { STATE_LOCKED                                            } } }
+      { STATE_LOCKED                                            } } },
+
+  { STATE_NOTIFY, NULL, NULL,
+    { { STATE_LOCKED                                            } } }
 };
 
 static gboolean
@@ -875,6 +448,37 @@ g_variant_is_out_of_state (GVariant *value,
   return TRUE;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+/* this is the only function that ever allocates a new GVariant structure.
+ * g_variant_unref() is the only function that ever frees one.
+ */
+static GVariant *
+g_variant_alloc (GVariantTypeInfo *type,
+                 guint             initial_state)
+{
+  GVariant *variant;
+
+  variant = g_slice_new (GVariant);
+  variant->ref_count = 1;
+  variant->type = type;
+  variant->floating = TRUE;
+  variant->state = initial_state;
+  g_static_mutex_init (&variant->lock);
+
+  return variant;
+}
+
 static GVariantSerialised
 g_variant_get_gvs (GVariant  *value,
                    GVariant **source)
@@ -956,6 +560,49 @@ g_variant_get_zeros (gsize size)
   return zeros;
 }
 
+static GVariant *
+g_variant_from_gvs (GVariantSerialised  gvs,
+                    GVariant           *source,
+                    gboolean            trusted)
+{
+  GVariant *new;
+
+  g_assert (source->state & STATE_INDEPENDENT);
+
+  new = g_variant_alloc (gvs.type, STATE_SERIALISED | STATE_SIZE_KNOWN);
+
+  if (gvs.data == NULL)
+    {
+      g_assert (!(source->state & STATE_TRUSTED));
+      g_assert (!trusted);
+
+      new->contents.serialised.source = NULL;
+      new->contents.serialised.data = g_variant_get_zeros (gvs.size);
+      new->size = gvs.size;
+
+      new->state |= STATE_INDEPENDENT | STATE_NATIVE;
+
+      if (gvs.size)
+        new->state |= STATE_TRUSTED;
+    }
+  else
+    {
+      new->contents.serialised.source = g_variant_ref (source);
+      new->contents.serialised.data = gvs.data;
+      new->size = gvs.size;
+
+      if (source->state & STATE_NATIVE)
+        new->state |= STATE_NATIVE;
+
+      if (trusted || source->state & STATE_TRUSTED)
+        new->state |= STATE_TRUSTED;
+    }
+
+  check (new);
+
+  return new;
+}
+
 /**
  * g_variant_get_child:
  * @value: a container #GVariant
@@ -996,19 +643,8 @@ g_variant_get_child (GVariant *value,
 
       gvs = g_variant_get_gvs (value, &source);
       gvs = g_variant_serialised_get_child (gvs, index);
-
-      if (gvs.data == NULL)
-        /* error */
-        {
-          child = g_variant_alloc (G_VARIANT_SERIALISED, gvs.type);
-          child->contents.serialised.source = NULL;
-          child->contents.serialised.data = g_variant_get_zeros (gvs.size);
-          child->size = gvs.size;
-        }
-      else
-        /* no error */
-        child = g_variant_from_gvs (gvs, source, value->trusted);
-
+      child = g_variant_from_gvs (gvs, source,
+                                  value->state & STATE_TRUSTED);
       g_variant_unref (source);
     }
 
@@ -1203,4 +839,386 @@ g_variant_get_fixed_array (GVariant *value,
     *length = g_variant_n_children (value);
 
   return g_variant_get_data (value);
+}
+
+/*
+ * g_variant_apply_flags:
+ * @value: a fresh #GVariant instance
+ * @flags: various load flags
+ *
+ * This function is the common code used to apply flags (normalise,
+ * byteswap, etc) to fresh #GVariant instances created using one of
+ * the load functions.
+ */
+static GVariant *
+g_variant_apply_flags (GVariant      *value,
+                       GVariantFlags  flags)
+{
+  guint16 byte_order = flags;
+
+  if (byte_order == 0)
+    byte_order = G_BYTE_ORDER;
+
+  g_assert (byte_order == G_LITTLE_ENDIAN ||
+            byte_order == G_BIG_ENDIAN);
+
+  if (byte_order == G_BYTE_ORDER)
+    value->state |= STATE_NATIVE;
+
+  else if (!flags & G_VARIANT_LAZY_BYTESWAP)
+    g_variant_require_state (value, STATE_NATIVE);
+
+  check (value);
+
+  return value;
+}
+
+/**
+ * g_variant_unref:
+ * @value: a #GVariant
+ *
+ * Decreases the reference count of @variant.  When its reference
+ * count drops to 0, the memory used by the variant is freed.
+ **/
+void
+g_variant_unref (GVariant *value)
+{
+  check (value);
+
+  if (g_atomic_int_dec_and_test (&value->ref_count))
+    {
+      /* free the type info */
+      g_variant_type_info_unref (value->type);
+
+      /* free the data */
+      if (value->state & STATE_SERIALISED)
+        {
+          if (value->state & STATE_RENORMALISED ||
+              !(value->state & STATE_INDEPENDENT))
+            g_variant_unref (value->contents.serialised.source);
+
+          if (value->state & STATE_INDEPENDENT)
+            g_slice_free1 (value->size, value->contents.serialised.data);
+        }
+      else
+        {
+          GVariant **children;
+          gsize n_children;
+          gsize i;
+
+          children = value->contents.tree.children;
+          n_children = value->contents.tree.n_children;
+
+          for (i = 0; i < n_children; i++)
+            g_variant_unref (children[i]);
+
+          g_slice_free1 (sizeof (GVariant *) * n_children, children);
+        }
+
+      /* free the structure itself */
+      g_slice_free (GVariant, value);
+    }
+}
+
+/**
+ * g_variant_ref:
+ * @value: a #GVariant
+ * @returns: the same @variant
+ *
+ * Increases the reference count of @variant.
+ **/
+GVariant *
+g_variant_ref (GVariant *value)
+{
+  check (value);
+
+  g_atomic_int_inc (&value->ref_count);
+
+  return value;
+}
+
+/**
+ * g_variant_ref_sink:
+ * @value: a #GVariant
+ * @returns: the same @variant
+ *
+ * If @value is floating, mark it as no longer floating.  If it is not
+ * floating, increase its reference count.
+ **/
+GVariant *
+g_variant_ref_sink (GVariant *value)
+{
+  check (value);
+
+  g_variant_ref (value);
+  if (g_atomic_int_compare_and_exchange (&value->floating, 1, 0))
+    g_variant_unref (value);
+
+  return value;
+}
+
+GVariant *
+g_variant_ensure_floating (GVariant *value)
+{
+  check (value);
+
+  g_variant_ref_sink (value);
+
+  if (value->ref_count == 1)
+    /* it is exclusively ours */
+    {
+      value->floating = TRUE;
+
+      return value;
+    }
+  else
+    /* someone else has it too.  make our own. */
+    {
+      GVariant *new;
+
+      g_error ("not yet supported");
+      new = NULL;
+      g_variant_unref (value);
+
+      return new;
+    }
+}
+
+/* private */
+GVariant *
+g_variant_new_tree (const GVariantType  *type,
+                    GVariant           **children,
+                    gsize                n_children,
+                    gboolean             trusted)
+{
+  GVariant *new;
+
+  new = g_variant_alloc (g_variant_type_info_get (type), STATE_INDEPENDENT);
+
+  new->contents.tree.children = children;
+  new->contents.tree.n_children = n_children;
+  new->size = 0;
+
+  if (trusted)
+    new->state |= STATE_TRUSTED;
+
+  check (new);
+
+  return new;
+}
+
+/**
+ * g_variant_from_slice:
+ * @type: the #GVariantType of the new variant
+ * @slice: a pointer to a GSlice-allocated region
+ * @size: the size of @slice
+ * @flags: zero or more #GVariantLoadFlags
+ * @returns: a new #GVariant instance
+ *
+ * Creates a #GVariant instance from a memory slice.  Ownership of the
+ * memory slice is assumed.  This function allows efficiently creating
+ * #GVariant instances with data that is, for example, read over a
+ * socket.
+ *
+ * This function never fails.
+ **/
+GVariant *
+g_variant_from_slice (const GVariantType *type,
+                      gpointer            slice,
+                      gsize               size,
+                      GVariantFlags       flags)
+{
+  GVariant *new;
+
+  new = g_variant_alloc (g_variant_type_info_get (type),
+                         STATE_SERIALISED | STATE_INDEPENDENT |
+                         STATE_SIZE_KNOWN);
+
+  new->contents.serialised.source = NULL;
+  new->contents.serialised.data = slice;
+  new->size = size;
+
+  return g_variant_apply_flags (new, flags);
+}
+
+GVariant *
+g_variant_from_data (const GVariantType *type,
+                     gconstpointer       data,
+                     gsize               size,
+                     GVariantFlags       flags,
+                     GDestroyNotify      notify,
+                     gpointer            user_data)
+{
+  GVariant *new;
+
+  if (type == NULL)
+    {
+      GVariant *variant;
+
+      variant = g_variant_from_data (G_VARIANT_TYPE_VARIANT,
+                                     data, size, flags, notify, user_data);
+      new = g_variant_get_variant (variant);
+      g_variant_unref (variant);
+
+      return new;
+    }
+  else
+    {
+      GVariant *marker;
+
+      marker = g_variant_alloc (NULL, STATE_NOTIFY);
+      marker->contents.notify.callback = notify;
+      marker->contents.notify.user_data = user_data;
+
+      new = g_variant_alloc (g_variant_type_info_get (type),
+                             STATE_SERIALISED | STATE_SIZE_KNOWN);
+      new->contents.serialised.source = marker;
+      new->contents.serialised.data = (gpointer) data;
+      new->size = size;
+
+      return g_variant_apply_flags (new, flags);
+    }
+}
+
+GVariant *
+g_variant_load (const GVariantType *type,
+                gconstpointer       data,
+                gsize               size,
+                GVariantFlags       flags)
+{
+  GVariant *new;
+
+  if (type == NULL)
+    {
+      GVariant *variant;
+
+      variant = g_variant_load (G_VARIANT_TYPE_VARIANT, data, size, flags);
+      new = g_variant_get_variant (variant);
+      g_variant_unref (variant);
+
+      return new;
+    }
+  else
+    {
+      gpointer slice;
+
+      slice = g_slice_alloc (size);
+      memcpy (slice, data, size);
+
+      return g_variant_from_slice (type, slice, size, flags);
+    }
+}
+
+/**
+ * g_variant_get_type:
+ * @value: a #GVariant
+ * @returns: a #GVariantType
+ *
+ * Determines the type of @value.
+ *
+ * The return value is valid for the lifetime of @value and must not
+ * be freed.
+ */
+const GVariantType *
+g_variant_get_type (GVariant *value)
+{
+  check (value);
+
+  return g_variant_type_info_get_type (value->type);
+}
+
+/**
+ * g_variant_load:
+ * @type: the #GVariantType of the new variant
+ * @data: the serialised #GVariant data to load
+ * @size: the size of @data
+ * @flags: zero or more #GVariantLoadFlags
+ * @returns: a new #GVariant instance
+ *
+ * Creates a new #GVariant instance.  @data is copied.  For a more
+ * efficient way to create #GVariant instances, see
+ * g_variant_from_slice() or XXX.
+ *
+ * This function is O(n) in the size of @data.
+ *
+ * This function never fails.
+ **/
+
+/*
+ * g_variant_assert_invariant:
+ * @value: a #GVariant instance to check
+ *
+ * This function asserts the class invariant on a #GVariant instance.
+ * Any detected problems will result in an assertion failure.
+ *
+ * This function is potentially very slow.
+ *
+ * This function never fails.
+ * TS
+ */
+void
+g_variant_assert_invariant (GVariant *value)
+{
+#if 0
+  GVariantSerialised gvs;
+
+  g_assert (value != NULL);
+
+  g_variant_lock (value);
+
+  g_assert_cmpint (value->ref_count, >, 0);
+  g_assert (value->type != NULL);
+
+  switch (value->representation)
+  {
+    case G_VARIANT_TREE:
+      g_variant_unlock (value);
+      return;
+
+    case G_VARIANT_SERIALISED:
+      if (value->contents.serialised.source)
+        {
+          GVariant *source = value->contents.serialised.source;
+
+          g_assert (source->native_endian || !value->native_endian);
+          g_assert (source->representation == G_VARIANT_SERIALISED ||
+                    source->representation == G_VARIANT_NOTIFY);
+
+          if (source->representation == G_VARIANT_SERIALISED)
+            {
+              /* no grandparents */
+              g_assert (source->contents.serialised.source == NULL);
+              g_variant_assert_invariant (source);
+            }
+        }
+
+      gvs.type = value->type;
+      gvs.size = value->size;
+      gvs.data = value->contents.serialised.data;
+      break;
+
+    case G_VARIANT_RENORMALISED:
+      g_assert (value->trusted == FALSE);
+      g_assert (value->contents.serialised.source != NULL);
+      g_assert (value->contents.serialised.source->representation ==
+                G_VARIANT_SERIALISED);
+      g_variant_assert_invariant (value->contents.serialised.source);
+
+      gvs.type = value->type;
+      gvs.size = value->size;
+      gvs.data = value->contents.serialised.data;
+
+    default:
+      g_assert_not_reached ();
+  }
+
+  g_variant_serialised_assert_invariant (gvs);
+  g_variant_unlock (value);
+#endif
+}
+
+gboolean
+g_variant_is_trusted (GVariant *value)
+{
+  return !!(value->state & STATE_TRUSTED);
 }
