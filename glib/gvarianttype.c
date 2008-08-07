@@ -850,6 +850,33 @@ g_variant_type_value (const GVariantType *type)
  * The result of this function must be free'd with a call to
  * g_variant_type_free().
  **/
+static GVariantType *
+g_variant_type_new_struct_slow (const gpointer     *items,
+                                GVariantTypeGetter  func,
+                                gsize               length)
+{
+  GString *string;
+  gsize i;
+
+  string = g_string_new ("(");
+  for (i = 0; i < length; i++)
+    {
+      const GVariantType *type;
+      gsize size;
+
+      if (func)
+        type = func (items[i]);
+      else
+        type = items[i];
+
+      size = g_variant_type_get_string_length (type);
+      g_string_append_len (string, (const gchar *) type, size);
+    }
+  g_string_append_c (string, ')');
+
+  return (GVariantType *) g_string_free (string, FALSE);
+}
+
 GVariantType *
 _g_variant_type_new_struct (const gpointer     *items,
                             GVariantTypeGetter  func,
@@ -883,9 +910,7 @@ _g_variant_type_new_struct (const gpointer     *items,
       size = g_variant_type_get_string_length (type);
 
       if (offset + size >= sizeof buffer) /* leave room for ')' */
-        g_error ("You just requested creation of an extremely complex "
-                 "structure type.  If you really want to do this, file "
-                 "a bug to have this limitation lifted.");
+        return g_variant_type_new_struct_slow (items, func, length);
 
       memcpy (&buffer[offset], type, size);
       offset += size;
