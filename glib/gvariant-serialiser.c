@@ -139,46 +139,6 @@ g_variant_serialiser_array_length (GVariantSerialised  container,
   return TRUE;
 }
 
-static gsize
-g_variant_serialiser_struct_end (GVariantSerialised container,
-                                 gsize              n_offsets)
-{
-  check_cases (0, return container.size;,
-                  return container.size - (n_offsets * offset_size); ,);
-}
-
-static GVariantSerialised
-g_variant_serialiser_error (GVariantSerialised  container,
-                            GVariantTypeInfo   *type)
-{
-  GVariantSerialised result = { type, NULL, 0 };
-
-  g_assert_not_reached ();
-
-  return result;
-}
-
-static GVariantSerialised
-g_variant_serialiser_sub (GVariantSerialised  container,
-                          GVariantTypeInfo   *type,
-                          gsize               start,
-                          gsize               end)
-{
-  GVariantSerialised result = { g_variant_type_info_ref (type) };
-
-  if (start < end && end <= container.size)
-    {
-      result.data = &container.data[start];
-      result.size = end - start;
-    }
-  else
-    {
-      result.data = NULL;
-      result.size = 0;
-    }
-
-  return result;
-}
 
 gsize
 g_variant_serialised_n_children (GVariantSerialised container)
@@ -279,21 +239,21 @@ g_variant_serialised_get_child (GVariantSerialised container,
   {
     case G_VARIANT_TYPE_CLASS_VARIANT:
       {
-        GVariantSerialised value = { NULL, container.data, container.size };
+        GVariantSerialised child = { NULL, container.data, container.size };
 
         if G_UNLIKELY (index > 0)
           break;
 
         /* find '\0' character */
-        while (value.size && container.data[--value.size]);
+        while (child.size && container.data[--child.size]);
 
         /* the loop can finish for two reasons.
          * 1) we found a '\0'.   ((good.))
          * 2) we hit the start.  ((only good if there's a '\0' there))
          */
-        if (container.data[value.size] == '\0')
+        if (container.data[child.size] == '\0')
           {
-            gchar *str = (gchar *) container.data + value.size + 1;
+            gchar *str = (gchar *) container.data + child.size + 1;
 
             /* in the case that we're accessing a shared memory buffer,
              * someone could change the  string under us and cause us
@@ -301,32 +261,38 @@ g_variant_serialised_get_child (GVariantSerialised container,
              *
              * if we carefully make our own copy then we avoid that.
              */
-            str = g_strndup (str, container.size - value.size - 1);
+            str = g_strndup (str, container.size - child.size - 1);
             if (g_variant_type_string_is_valid (str))
-              value.type = g_variant_type_info_get (G_VARIANT_TYPE (str));
+              child.type = g_variant_type_info_get (G_VARIANT_TYPE (str));
 
             g_free (str);
           }
 
-        if G_UNLIKELY (value.type == NULL)
-          return g_variant_serialiser_error (container, NULL);
+        if G_UNLIKELY (child.type == NULL)
+          {
+            child.type = NULL;
+            child.data = NULL;
+            child.size = 0;
+
+            return child;
+          }
 
         {
           gssize fixed_size;
 
-          g_variant_type_info_query (value.type, NULL, &fixed_size);
+          g_variant_type_info_query (child.type, NULL, &fixed_size);
 
-          if G_UNLIKELY (fixed_size > 0 && value.size != fixed_size)
+          if G_UNLIKELY (fixed_size > 0 && child.size != fixed_size)
             {
-              value.size = fixed_size;
-              value.data = NULL;
+              child.size = fixed_size;
+              child.data = NULL;
             }
         }
 
-        if (value.size == 0)
-          value.data = NULL;
+        if (child.size == 0)
+          child.data = NULL;
 
-        return value;
+        return child;
       }
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
@@ -430,39 +396,77 @@ g_variant_serialised_get_child (GVariantSerialised container,
         return child;
       }
 
-    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
     case G_VARIANT_TYPE_CLASS_STRUCT:
+    case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       {
         const GVariantMemberInfo *info;
-        gsize start = 0, end = -1;
+        GVariantSerialised child;
+        gsize start = 0, end = 0;
+        gsize n_children;
+        guint offset_size;
         gssize fixed_size;
 
-        if (!(info = g_variant_type_info_member_info (container.type, index)))
+        offset_size = g_variant_serialiser_offset_size (container);
+        n_children = g_variant_type_info_n_members (container.type);
+        info = g_variant_type_info_member_info (container.type, index);
+        if (info == NULL)
           break;
 
-        if (info->i != -1)
-          if (!g_variant_serialiser_dereference (container, info->i, &start))
-            return g_variant_serialiser_error (container, info->type);
+        child.type = g_variant_type_info_ref (info->type);
+        g_variant_type_info_query (info->type, NULL, &fixed_size);
+
+        if (fixed_size >= 0)
+          child.size = fixed_size;
+        else
+          child.size = 0;
+        child.data = NULL;
+
+        if (info->i != -1l)
+          {
+            if (offset_size * (info->i + 1) > container.size)
+              return child;
+
+            memcpy (&start,
+                    container.data + container.size - offset_size * (info->i + 1),
+                    offset_size);
+            start = GSIZE_FROM_LE (start);
+          }
 
         start += info->a;
         start &= info->b;
         start |= info->c;
 
-        g_variant_type_info_query (info->type, NULL, &fixed_size);
-
         if (fixed_size >= 0)
-          end = start + fixed_size;
-        else if (index == g_variant_type_info_n_members (container.type) - 1)
-          end = g_variant_serialiser_struct_end (container, 1 + info->i);
-        else
           {
-            if (!g_variant_serialiser_dereference (container,
-                                                   info->i + 1, &end))
-              return g_variant_serialiser_error (container, info->type);
+            if (start + fixed_size <= container.size)
+              child.data = container.data + start;
+
+            child.data = container.data + start;
+            return child;
           }
 
-        return g_variant_serialiser_sub (container, info->type, start, end);
+        if (index == n_children - 1)
+          end = container.size - offset_size * (info->i + 1);
+        else
+          {
+            if (offset_size * (info->i + 2) > container.size)
+              return child;
+
+            memcpy (&end,
+                    container.data + container.size - offset_size * (info->i + 2),
+                    offset_size);
+            end = GSIZE_FROM_LE (end);
+          }
+
+        if (start < end && end <= container.size)
+          {
+            child.data = container.data + start;
+            child.size = end - start;
+          }
+
+        return child;
       }
+
     default:
       g_assert_not_reached ();
   }
