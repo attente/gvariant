@@ -15,7 +15,7 @@ struct OPAQUE_TYPE__GVariantTypeInfo
 {
   GVariantType *type;
 
-  gssize fixed_size;
+  gsize fixed_size;
   guchar info_class;
   guchar alignment;
   gint ref_count;
@@ -64,7 +64,7 @@ g_variant_type_info_get_type_class (GVariantTypeInfo *info)
 void
 g_variant_type_info_query (GVariantTypeInfo *info,
                            guint            *alignment,
-                          gssize           *fixed_size)
+                           gsize           *fixed_size)
 {
   g_assert_cmpint (info->ref_count, >, 0);
 
@@ -103,7 +103,7 @@ array_info_new (const GVariantType *type)
 
   info->element = g_variant_type_info_get (g_variant_type_element (type));
   info->self.alignment = info->element->alignment;
-  info->self.fixed_size = -1;
+  info->self.fixed_size = 0;
 
   return (GVariantTypeInfo *) info;
 }
@@ -117,7 +117,7 @@ g_variant_type_info_element (GVariantTypeInfo *info)
 void
 g_variant_type_info_query_element (GVariantTypeInfo *info,
                                    guint            *alignment,
-                                   gssize           *fixed_size)
+                                   gsize            *fixed_size)
 {
   g_variant_type_info_query (ARRAY_INFO (info)->element,
                              alignment, fixed_size);
@@ -227,7 +227,7 @@ struct_generate_table (StructInfo *info)
 
       struct_table_append (&items, i, a, b, c);
 
-      if (e == -1)
+      if (e == 0)
         i++, a = b = c = 0;
       else
         c += e;
@@ -246,11 +246,11 @@ struct_set_self_info (StructInfo *info)
         info->self.alignment |= m->type->alignment;
       m--;
 
-      if (m->i == -1 && m->type->fixed_size >= 0)
+      if (m->i == -1 && m->type->fixed_size)
         info->self.fixed_size = struct_align (((m->a & m->b) | m->c) + m->type->fixed_size,
-                                  info->self.alignment);
+                                              info->self.alignment);
       else
-        info->self.fixed_size = -1;
+        info->self.fixed_size = 0;
     }
   else
     {
@@ -335,14 +335,14 @@ base_info_new (const GVariantTypeClass class)
 
     case G_VARIANT_TYPE_CLASS_VARIANT:
       info->alignment = 8 - 1;
-      info->fixed_size = -1;
+      info->fixed_size = 0;
       break;
 
     case G_VARIANT_TYPE_CLASS_STRING:
     case G_VARIANT_TYPE_CLASS_OBJECT_PATH:
     case G_VARIANT_TYPE_CLASS_SIGNATURE:
       info->alignment = 1 - 1;
-      info->fixed_size = -1;
+      info->fixed_size = 0;
       break;
 
     default:

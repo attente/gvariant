@@ -158,14 +158,14 @@ g_variant_serialised_n_children (GVariantSerialised container)
 
     case G_VARIANT_TYPE_CLASS_MAYBE:
       {
-        gssize size;
+        gsize size;
 
         if (container.size == 0)
           return 0;
 
         g_variant_type_info_query_element (container.type, NULL, &size);
 
-        if (size > 0 && size != container.size)
+        if (size && size != container.size)
           break;
 
         return 1;
@@ -173,7 +173,7 @@ g_variant_serialised_n_children (GVariantSerialised container)
 
     case G_VARIANT_TYPE_CLASS_ARRAY:
       {
-        gssize size;
+        gsize fixed_size;
 
         /* an array with a length of zero always has a size of zero.
          * an array with a size of zero always has a length of zero.
@@ -181,9 +181,9 @@ g_variant_serialised_n_children (GVariantSerialised container)
         if (container.size == 0)
           return 0;
 
-        g_variant_type_info_query_element (container.type, NULL, &size);
+        g_variant_type_info_query_element (container.type, NULL, &fixed_size);
 
-        if (size <= 0)
+        if (!fixed_size)
           /* case where array contains variable-sized elements
            * or fixed-size elements of size 0 (treated as variable)
            */
@@ -198,10 +198,10 @@ g_variant_serialised_n_children (GVariantSerialised container)
         else
           /* case where array contains fixed-sized elements */
           {
-            if G_UNLIKELY (container.size % size > 0)
+            if G_UNLIKELY (container.size % fixed_size > 0)
               break;
 
-            return container.size / size;
+            return container.size / fixed_size;
           }
       }
 
@@ -278,11 +278,11 @@ g_variant_serialised_get_child (GVariantSerialised container,
           }
 
         {
-          gssize fixed_size;
+          gsize fixed_size;
 
           g_variant_type_info_query (child.type, NULL, &fixed_size);
 
-          if G_UNLIKELY (fixed_size > 0 && child.size != fixed_size)
+          if G_UNLIKELY (fixed_size && child.size != fixed_size)
             {
               child.size = fixed_size;
               child.data = NULL;
@@ -298,7 +298,7 @@ g_variant_serialised_get_child (GVariantSerialised container,
     case G_VARIANT_TYPE_CLASS_MAYBE:
       {
         GVariantSerialised child;
-        gssize size;
+        gsize fixed_size;
 
         child.type = g_variant_type_info_element (container.type);
         g_variant_type_info_ref (child.type);
@@ -307,14 +307,14 @@ g_variant_serialised_get_child (GVariantSerialised container,
         if G_UNLIKELY (container.size == 0 || index > 0)
           break;
 
-        g_variant_type_info_query (child.type, NULL, &size);
+        g_variant_type_info_query (child.type, NULL, &fixed_size);
 
-        if (size > 0)
+        if (fixed_size)
           {
             /* if this doesn't match then we are considered
              * 'Nothing', so there is no child to get...
              */
-            if G_UNLIKELY (container.size != size)
+            if G_UNLIKELY (container.size != fixed_size)
               break;
 
             /* fixed size: child fills entire container */
@@ -330,7 +330,7 @@ g_variant_serialised_get_child (GVariantSerialised container,
     case G_VARIANT_TYPE_CLASS_ARRAY:
       {
         GVariantSerialised child;
-        gssize fixed_size;
+        gsize fixed_size;
         guint alignment;
 
         child.type = g_variant_type_info_element (container.type);
@@ -338,7 +338,7 @@ g_variant_serialised_get_child (GVariantSerialised container,
 
         g_variant_type_info_query (child.type, &alignment, &fixed_size);
 
-        if (fixed_size > 0)
+        if (fixed_size)
           {
             if G_UNLIKELY (container.size % fixed_size != 0 ||
                            fixed_size * (index + 1) > container.size)
@@ -404,7 +404,6 @@ g_variant_serialised_get_child (GVariantSerialised container,
         gsize start = 0, end = 0;
         gsize n_children;
         guint offset_size;
-        gssize fixed_size;
 
         offset_size = g_variant_serialiser_offset_size (container);
         n_children = g_variant_type_info_n_members (container.type);
@@ -413,12 +412,7 @@ g_variant_serialised_get_child (GVariantSerialised container,
           break;
 
         child.type = g_variant_type_info_ref (info->type);
-        g_variant_type_info_query (info->type, NULL, &fixed_size);
-
-        if (fixed_size >= 0)
-          child.size = fixed_size;
-        else
-          child.size = 0;
+        g_variant_type_info_query (info->type, NULL, &child.size);
         child.data = NULL;
 
         if (info->i != -1l)
@@ -436,12 +430,11 @@ g_variant_serialised_get_child (GVariantSerialised container,
         start &= info->b;
         start |= info->c;
 
-        if (fixed_size >= 0)
+        if (child.size)
           {
-            if (start + fixed_size <= container.size)
+            if (start + child.size <= container.size)
               child.data = container.data + start;
 
-            child.data = container.data + start;
             return child;
           }
 
@@ -518,7 +511,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
         if (n_children)
           {
             GVariantSerialised child = { NULL, container.data, 0 };
-            gssize fixed_size;
+            gsize fixed_size;
 
             child.type = g_variant_type_info_element (container.type);
             g_variant_type_info_query (child.type, NULL, &fixed_size);
@@ -529,12 +522,11 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
              */
             gvs_filler (&child, children[0]);
 
-            /* for all fixed sized children, double check */
-            if (fixed_size >= 0)
+            if (fixed_size)
+              /* for all fixed sized children, double check */
               g_assert_cmpint (fixed_size, ==, child.size);
-
-            /* for variable-width or 0-size children, add a pad byte */
-            if (fixed_size <= 0)
+            else
+              /* for variable-width children, add a pad byte */
               container.data[child.size++] = '\0';
 
             g_assert_cmpint (child.size, ==, container.size);
@@ -552,7 +544,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
             GVariantSerialised child = { NULL, container.data, 0 };
             guchar *offset_bound, *offset_ptr;
             guint offset_size, alignment;
-            gssize fixed_size;
+            gsize fixed_size;
 
             child.type = g_variant_type_info_element (container.type);
             g_variant_type_info_query (child.type, &alignment, &fixed_size);
@@ -560,7 +552,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
             offset_bound = container.data + container.size;
             child.data = container.data;
 
-            if (fixed_size <= 0)
+            if (!fixed_size)
               offset_bound -= offset_size * n_children;
             offset_ptr = offset_bound;
 
@@ -579,7 +571,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
                 child.data += child.size;
                 child.size = 0;
 
-                if (fixed_size <= 0)
+                if (!fixed_size)
                   {
                     gsize offset = GSIZE_TO_LE (child.data - container.data);
                     memcpy (offset_ptr, &offset, offset_size);
@@ -602,7 +594,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
             gsize offset, offsets_bound, offsets_ptr;
             const GVariantMemberInfo *info;
             guint offset_size, align;
-            gssize fixed_size;
+            gsize fixed_size;
             gboolean fixed;
 
             info = g_variant_type_info_member_info (container.type, 0);
@@ -625,7 +617,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
                   container.data[offset++] = '\0';
                 offset += child.size;
 
-                if (fixed_size < 0)
+                if (!fixed_size)
                   {
                     fixed = FALSE;
 
@@ -651,7 +643,7 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
                 g_assert_cmpint (offset, ==, fixed_size);
               }
             else
-              g_assert (fixed_size == -1);
+              g_assert_cmpint (fixed_size, ==, 0);
 
             g_assert_cmpint (offset, ==, offsets_bound);
             g_assert_cmpint (offsets_ptr, ==, offsets_bound);
@@ -695,7 +687,7 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
     case G_VARIANT_TYPE_CLASS_MAYBE:
       {
         GVariantSerialised child = { g_variant_type_info_element (type) };
-        gssize fixed_size;
+        gsize fixed_size;
 
         g_assert_cmpint (n_children, <=, 1);
 
@@ -705,10 +697,11 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
         gvs_filler (&child, children[0]);
         g_variant_type_info_query (child.type, NULL, &fixed_size);
 
-        if (fixed_size >= 0)
+        if (fixed_size)
+          /* double check */
           g_assert (child.size == fixed_size);
-
-        if (fixed_size <= 0)
+        else
+          /* room for the padding byte */
           child.size++;
 
         return child.size;
@@ -717,7 +710,7 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
     case G_VARIANT_TYPE_CLASS_ARRAY:
       {
         GVariantTypeInfo *elem_type;
-        gssize fixed_size;
+        gsize fixed_size;
         guint alignment;
 
         if (n_children == 0)
@@ -726,7 +719,7 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
         elem_type = g_variant_type_info_element (type);
         g_variant_type_info_query (elem_type, &alignment, &fixed_size);
 
-        if (fixed_size <= 0)
+        if (!fixed_size)
           {
             gsize offset;
             gsize i;
@@ -763,11 +756,11 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
         g_assert_cmpint (g_variant_type_info_n_members (type), ==, n_children);
 
         {
-          gssize fixed_size;
+          gsize fixed_size;
 
           g_variant_type_info_query (type, NULL, &fixed_size);
 
-          if (fixed_size >= 0)
+          if (fixed_size)
             return fixed_size;
         }
 
@@ -779,15 +772,15 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
             GVariantSerialised child = {};
             const GVariantMemberInfo *info;
             guint alignment;
-            gssize size;
+            gsize fixed_size;
 
             info = g_variant_type_info_member_info (type, i);
             gvs_filler (&child, children[i]);
             g_assert (child.type == info->type);
 
-            g_variant_type_info_query (info->type, &alignment, &size);
+            g_variant_type_info_query (info->type, &alignment, &fixed_size);
 
-            if (size < 0)
+            if (!fixed_size)
               {
                 if (child.size)
                   {
@@ -801,7 +794,7 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
             else
               {
                 offset += (-offset) & alignment;
-                offset += size;
+                offset += fixed_size;
               }
           }
 
@@ -820,7 +813,7 @@ g_variant_serialiser_needed_size (GVariantTypeInfo         *type,
 void
 g_variant_serialised_byteswap (GVariantSerialised value)
 {
-  gssize fixed_size;
+  gsize fixed_size;
   guint alignment;
 
   if (!value.data)
@@ -895,7 +888,7 @@ g_variant_serialised_byteswap (GVariantSerialised value)
 void
 g_variant_serialised_assert_invariant (GVariantSerialised value)
 {
-  gssize fixed_size;
+  gsize fixed_size;
   guint alignment;
 
   g_assert (value.type != NULL);
@@ -904,7 +897,7 @@ g_variant_serialised_assert_invariant (GVariantSerialised value)
   g_variant_type_info_query (value.type, &alignment, &fixed_size);
 
   g_assert_cmpint (((gsize) value.data) & alignment, ==, 0);
-  if (fixed_size >= 0)
+  if (fixed_size)
     g_assert_cmpint (value.size, ==, fixed_size);
 }
 
@@ -933,7 +926,7 @@ g_variant_serialised_is_normal (GVariantSerialised value)
     case G_VARIANT_TYPE_CLASS_MAYBE:
       {
         GVariantTypeInfo *element;
-        gssize fixed_size;
+        gsize fixed_size;
 
         /* Nothing case */
         if (value.size == 0)
@@ -943,7 +936,7 @@ g_variant_serialised_is_normal (GVariantSerialised value)
         element = g_variant_type_info_element (value.type);
         g_variant_type_info_query (element, NULL, &fixed_size);
 
-        if (fixed_size > 0)
+        if (fixed_size)
           {
             /* if element is fixed size, Just must be the same */
             return value.size == fixed_size;
@@ -967,7 +960,7 @@ g_variant_serialised_is_normal (GVariantSerialised value)
         GVariantSerialised child = { g_variant_type_info_element (value.type),
                                      value.data,
                                      0 };
-        gssize fixed_size;
+        gsize fixed_size;
         guint alignment;
 
         if (value.size == 0)
@@ -975,7 +968,7 @@ g_variant_serialised_is_normal (GVariantSerialised value)
 
         g_variant_type_info_query (child.type, &alignment, &fixed_size);
 
-        if (fixed_size > 0)
+        if (fixed_size)
           {
             gsize i;
 

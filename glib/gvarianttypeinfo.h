@@ -33,13 +33,13 @@ const gchar                    *g_variant_type_info_get_string          (GVarian
 
 void                            g_variant_type_info_query               (GVariantTypeInfo   *typeinfo,
                                                                          guint              *alignment,
-                                                                         gssize             *size);
+                                                                         gsize              *size);
 
 /* array */
 GVariantTypeInfo               *g_variant_type_info_element             (GVariantTypeInfo   *typeinfo);
 void                            g_variant_type_info_query_element       (GVariantTypeInfo   *typeinfo,
                                                                          guint              *alignment,
-                                                                         gssize             *size);
+                                                                         gsize              *size);
 
 /* structure */
 gsize                           g_variant_type_info_n_members           (GVariantTypeInfo   *typeinfo);

@@ -793,13 +793,11 @@ gconstpointer
 g_variant_get_fixed (GVariant *value,
                      gsize     size)
 {
-  gboolean is_fixed;
-  gssize fixed_size;
+  gsize fixed_size;
 
   g_variant_type_info_query (value->type, NULL, &fixed_size);
-  is_fixed = fixed_size >= 0;
+  g_assert (fixed_size);
 
-  g_assert (is_fixed);
   g_assert_cmpint (size, ==, fixed_size);
 
   return g_variant_get_data (value);
@@ -833,14 +831,12 @@ g_variant_get_fixed_array (GVariant *value,
                            gsize     elem_size,
                            gsize    *length)
 {
-  gboolean is_fixed_array;
-  gssize fixed_elem_size;
+  gsize fixed_elem_size;
 
   /* unsupported: maybes are treated as arrays of size zero or one */
   g_variant_type_info_query_element (value->type, NULL, &fixed_elem_size);
-  is_fixed_array = fixed_elem_size >= 0;
+  g_assert (fixed_elem_size);
 
-  g_assert (is_fixed_array);
   g_assert_cmpint (elem_size, ==, fixed_elem_size);
 
   if (length != NULL)
