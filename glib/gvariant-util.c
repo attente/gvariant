@@ -442,7 +442,7 @@ g_variant_is_signature (const gchar *string)
   gsize first_invalid;
 
   /* make sure no non-concrete characters appear */
-  first_invalid = strspn (string, "ybnqiuxtdvma(){}");
+  first_invalid = strspn (string, "ybnqiuxtdvmasog(){}");
   if (string[first_invalid])
     return FALSE;
 
