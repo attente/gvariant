@@ -1,6 +1,7 @@
 link-test
 gvariant-endian
 gvariant-markup
+gvariant-objpath
 gvariant-random
 gvariant-serialiser
 gvariant-varargs
