@@ -198,11 +198,7 @@ g_variant_valist_new (const gchar **format_string,
 
     case 's':
       (*format_string)++;
-      {
-        const char *karstar = va_arg (*app, const gchar *);
-        g_print ("i see '%s'\n", karstar);
-      return g_variant_new_string (karstar);
-      }
+      return g_variant_new_string (va_arg (*app, const gchar *));
 
     case 'o':
       (*format_string)++;
@@ -690,6 +686,32 @@ g_variant_new (const gchar *format_string,
   return value;
 }
 
+/**
+ * g_variant_new_va:
+ * @format_string: a pointer to a format string
+ * @app: a pointer to a #va_list
+ * @returns: a new, floating, #GVariant
+ *
+ * This function is intended to be used by libraries based on
+ * #GVariant that want to provide g_variant_new()-like functionality
+ * to their users.
+ *
+ * The API is more general than g_variant_new() to allow a wider range
+ * of possible uses.
+ *
+ * @format_string must still point to a valid format string, but it
+ * need not be nul-terminated.  Instead, @format_string is updated to
+ * point to the first character past the end of the given format
+ * string.
+ *
+ * @app is a pointer to a #va_list.  The arguments, according to
+ * @format_string, are collected from this #va_list and the list is
+ * left pointing to the argument following the last.
+ *
+ * These two generalisations allow mixing of multiple calls to
+ * g_variant_new_va() and g_variant_get_va() within a single actual
+ * varargs call by the user.
+ **/
 GVariant *
 g_variant_new_va (const gchar **format_string,
                   va_list      *app)
@@ -697,7 +719,7 @@ g_variant_new_va (const gchar **format_string,
   GVariant *value;
 
   value = g_variant_valist_new (format_string, app);
-//  g_variant_flatten (value);
+  g_variant_flatten (value);
 
   return value;
 }
@@ -714,6 +736,32 @@ g_variant_get (GVariant    *value,
   va_end (ap);
 }
 
+/**
+ * g_variant_get_va:
+ * @value: a #GVariant
+ * @format_string: a pointer to a format string
+ * @app: a pointer to a #va_list
+ *
+ * This function is intended to be used by libraries based on
+ * #GVariant that want to provide g_variant_new()-like functionality
+ * to their users.
+ *
+ * The API is more general than g_variant_get() to allow a wider range
+ * of possible uses.
+ *
+ * @format_string must still point to a valid format string, but it
+ * need not be nul-terminated.  Instead, @format_string is updated to
+ * point to the first character past the end of the given format
+ * string.
+ *
+ * @app is a pointer to a #va_list.  The arguments, according to
+ * @format_string, are collected from this #va_list and the list is
+ * left pointing to the argument following the last.
+ *
+ * These two generalisations allow mixing of multiple calls to
+ * g_variant_new_va() and g_variant_get_va() within a single actual
+ * varargs call by the user.
+ **/
 void
 g_variant_get_va (GVariant     *value,
                   const gchar **format_string,
@@ -727,7 +775,7 @@ g_variant_get_va (GVariant     *value,
   g_assert (g_variant_matches (value, type));
   g_variant_type_free (type);
 
-//  g_variant_flatten (value);
+  g_variant_flatten (value);
   g_variant_valist_get (value, FALSE, format_string, app);
 }
 

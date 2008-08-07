@@ -5,6 +5,7 @@ LIBS            = $(glib_LIBS)
 AM_CFLAGS       = -I$(top_srcdir) $(glib_CFLAGS) -g
 AM_LDFLAGS      = ../libgvariant.la
 
+TEST_PROGS     += gvariant-big
 TEST_PROGS     += gvariant-endian
 TEST_PROGS     += gvariant-markup
 TEST_PROGS     += gvariant-objpath

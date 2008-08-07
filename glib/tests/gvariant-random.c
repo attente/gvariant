@@ -304,6 +304,7 @@ test (void)
       random_markup (markup1, depth);
       /* g_message ("%s", markup1->str); */
       variant = g_variant_markup_parse (markup1->str, -1, NULL, &error);
+      g_variant_flatten (variant);
 
       if (variant == NULL)
         {

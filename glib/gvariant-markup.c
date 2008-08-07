@@ -32,6 +32,31 @@ g_variant_markup_newline (GString  *string,
     g_string_append_c (string, '\n');
 }
 
+/**
+ * g_variant_markup_print:
+ * @value: a #GVariant
+ * @string: a #GString, or %NULL
+ * @newlines: %TRUE if newlines should be printed
+ * @indentation: the current indentation level
+ * @tabstop: the number of spaces per indenetation level
+ * @returns: a #GString containing the XML fragment
+ *
+ * Pretty-prints @value as an XML document fragment.
+ *
+ * If @string is non-%NULL then it is appended to and returned.  Else,
+ * a new empty #GString is allocated and it is returned.
+ *
+ * The @newlines, @indentation and @tabstop parameters control the
+ * whitespace that is emitted as part of the document.
+ *
+ * If @newlines is %TRUE, then newline characters will be printed
+ * where appropriate.
+ *
+ * If @indentation is non-zero then this is the number of spaces that
+ * are printed before the first and last tag.  If @tabstop is non-zero
+ * then this is the number of additional spaces that are added for
+ * each level of nesting.
+ **/
 GString *
 g_variant_markup_print (GVariant *value,
                         GString  *string,
@@ -46,8 +71,8 @@ g_variant_markup_print (GVariant *value,
   if G_UNLIKELY (string == NULL)
     string = g_string_new (NULL);
 
-  indentation += tabstop;
   g_variant_markup_indent (string, indentation);
+  indentation += tabstop;
 
   switch (g_variant_get_type_class (value))
   {
@@ -63,7 +88,7 @@ g_variant_markup_print (GVariant *value,
                                 newlines, indentation, tabstop);
         g_variant_unref (child);
 
-        g_variant_markup_indent (string, indentation);
+        g_variant_markup_indent (string, indentation - tabstop);
         g_string_append (string, "</variant>");
 
         break;
@@ -83,7 +108,7 @@ g_variant_markup_print (GVariant *value,
                                     newlines, indentation, tabstop);
             g_variant_unref (element);
 
-            g_variant_markup_indent (string, indentation);
+            g_variant_markup_indent (string, indentation - tabstop);
             g_string_append (string, "</maybe>");
           }
         else
@@ -108,7 +133,7 @@ g_variant_markup_print (GVariant *value,
               g_variant_markup_print (element, string,
                                       newlines, indentation, tabstop);
 
-            g_variant_markup_indent (string, indentation);
+            g_variant_markup_indent (string, indentation - tabstop);
             g_string_append (string, "</array>");
           }
         else
@@ -133,7 +158,7 @@ g_variant_markup_print (GVariant *value,
               g_variant_markup_print (element, string,
                                       newlines, indentation, tabstop);
 
-            g_variant_markup_indent (string, indentation);
+            g_variant_markup_indent (string, indentation - tabstop);
             g_string_append (string, "</struct>");
           }
         else
@@ -155,7 +180,7 @@ g_variant_markup_print (GVariant *value,
           g_variant_markup_print (element, string,
                                   newlines, indentation, tabstop);
 
-        g_variant_markup_indent (string, indentation);
+        g_variant_markup_indent (string, indentation - tabstop);
         g_string_append (string, "</dictionary-entry>");
 
         break;

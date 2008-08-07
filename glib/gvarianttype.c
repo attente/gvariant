@@ -15,6 +15,73 @@
 
 #include <string.h>
 
+/**
+ * GVariantType:
+ *
+ * An opaque type representing either the type of a #GVariant instance
+ * or a pattern that could match other types.
+ *
+ * Each #GVariantType has a corresponding type string.  The grammar
+ * generating all valid type strings is:
+ *
+ * <programlisting>
+ * type = base | 'a' type | 'm' type | 'v' | '*'
+ *      | 'r' | '{' + base + type + '}' | '(' + types + ')'
+ *
+ * base = 'b' | 'y' | 'n' | 'q' | 'i' | 'u' | 'x'
+ *      | 't' | 'd' | 's' | 'o' | 'g' | '?'
+ *
+ * types = '' | type + types
+ * </programlisting>
+ *
+ * The types that have single character type strings are all defined
+ * with their own constants (for example, %G_VARIANT_TYPE_BOOLEAN).
+ *
+ * The types that have type strings starting with 'a' are array types,
+ * where the characters after the 'a' are the type string of the array
+ * element type.
+ *
+ * The types that have type strings starting with 'm' are maybe types,
+ * where the characters after the 'm' are the type string of the maybe
+ * element type.
+ *
+ * The types that start with '{' and end with '}' are dictionary
+ * entry types, where the first contained type string is the one
+ * corresponding to the type of the key, and the second is the one
+ * corresponding to the type of the value.
+ *
+ * The types that start with '(' and end with ')' are structure types,
+ * where each type string contained between the brackets corresponds
+ * to an item type of that structure type.
+ *
+ * Any type that has a type string that can be generated from 'base'
+ * is in the #GVariantTypeClass %G_VARIANT_TYPE_CLASS_BASIC.
+ *
+ * Any type that has a type string that can be generated from 'type'
+ * is in the class %G_VARIANT_TYPE_CLASS_ALL.  This is all types.
+ *
+ * Each type is a member of exactly one other #GVariantTypeClass.
+ *
+ * Note that, in reality, a #GVariantType is just a string pointer
+ * casted to an opaque type.  It is only valid to have a pointer of
+ * this type, however, if you are sure that it is a valid type string.
+ * Functions that take #GVariantType as parameters assume that the
+ * string is well-formed.  Also note that a #GVariantType is not
+ * necessarily nul-terminated.
+ **/
+
+/**
+ * G_VARIANT_TYPE:
+ * @type_string: a well-formed #GVariantType type string
+ *
+ * Converts a string to a const #GVariantType.  Depending on the
+ * current debugging level, this function may perform a runtime check
+ * to ensure that @string is valid.
+ *
+ * It is always a programmer error to use this macro with an invalid
+ * type string.
+ **/
+
 static gboolean
 g_variant_type_check (const GVariantType *type)
 {
@@ -162,6 +229,8 @@ g_variant_type_copy (const GVariantType *type)
  * Creates a new #GVariantType corresponding to the type string given
  * by @type_string.  This new type must be freed using
  * g_variant_type_free().
+ *
+ * It is an error to call this function with an invalid type string.
  */
 GVariantType *
 g_variant_type_new (const gchar *type_string)
@@ -750,6 +819,17 @@ g_variant_type_value (const GVariantType *type)
 }
 
 /**
+ * GVariantTypeGetter:
+ * @data: a pointer
+ * @returns: a const #GVariantType
+ *
+ * A callback function intended for use with
+ * g_variant_type_new_struct().  This function's purpose is to extract
+ * a #GVariantType from some pointer type.  The returned type should
+ * be owned by whatever is at the end of the pointer because it won't
+ * be free'd.
+ **/
+/**
  * g_variant_type_new_struct:
  * @items: an array of items, one for each item
  * @func: a function to determine each item type
@@ -770,6 +850,33 @@ g_variant_type_value (const GVariantType *type)
  * The result of this function must be free'd with a call to
  * g_variant_type_free().
  **/
+static GVariantType *
+g_variant_type_new_struct_slow (const gpointer     *items,
+                                GVariantTypeGetter  func,
+                                gsize               length)
+{
+  GString *string;
+  gsize i;
+
+  string = g_string_new ("(");
+  for (i = 0; i < length; i++)
+    {
+      const GVariantType *type;
+      gsize size;
+
+      if (func)
+        type = func (items[i]);
+      else
+        type = items[i];
+
+      size = g_variant_type_get_string_length (type);
+      g_string_append_len (string, (const gchar *) type, size);
+    }
+  g_string_append_c (string, ')');
+
+  return (GVariantType *) g_string_free (string, FALSE);
+}
+
 GVariantType *
 _g_variant_type_new_struct (const gpointer     *items,
                             GVariantTypeGetter  func,
@@ -803,9 +910,7 @@ _g_variant_type_new_struct (const gpointer     *items,
       size = g_variant_type_get_string_length (type);
 
       if (offset + size >= sizeof buffer) /* leave room for ')' */
-        g_error ("You just requested creation of an extremely complex "
-                 "structure type.  If you really want to do this, file "
-                 "a bug to have this limitation lifted.");
+        return g_variant_type_new_struct_slow (items, func, length);
 
       memcpy (&buffer[offset], type, size);
       offset += size;

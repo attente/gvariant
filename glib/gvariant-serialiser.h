@@ -41,7 +41,7 @@ void                            g_variant_serialiser_serialise          (GVarian
 
 /* misc */
 void                            g_variant_serialised_assert_invariant   (GVariantSerialised        value);
-gboolean                        g_variant_serialised_is_normalised      (GVariantSerialised        value);
+gboolean                        g_variant_serialised_is_normal          (GVariantSerialised        value);
 void                            g_variant_serialised_byteswap           (GVariantSerialised        value);
 
 #endif /* _gvariant_serialiser_h_ */
