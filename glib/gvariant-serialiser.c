@@ -597,8 +597,6 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
     case G_VARIANT_TYPE_CLASS_STRUCT:
     case G_VARIANT_TYPE_CLASS_DICT_ENTRY:
       {
-        g_assert_cmpint ((n_children > 0), >=, (container.size > 0));
-
         if (n_children)
           {
             gsize offset, offsets_bound, offsets_ptr;
@@ -657,6 +655,12 @@ g_variant_serialiser_serialise (GVariantSerialised        container,
 
             g_assert_cmpint (offset, ==, offsets_bound);
             g_assert_cmpint (offsets_ptr, ==, offsets_bound);
+          }
+        else
+          {
+            /* () */
+            g_assert_cmpint (container.size, ==, 1);
+            container.data[0] = '\0';
           }
 
         return;

@@ -255,7 +255,7 @@ struct_set_self_info (StructInfo *info)
   else
     {
       info->self.alignment = 0;
-      info->self.fixed_size = 0;
+      info->self.fixed_size = 1;
     }
 }
 
