@@ -265,6 +265,10 @@ g_variant_transition_independent (GVariant *value)
   GVariant *source;
   gpointer  new;
 
+  source = value->contents.serialised.source;
+
+  g_assert (source->state & STATE_INDEPENDENT);
+
   new = g_slice_alloc (value->size);
 
   if (!(source->state & STATE_NATIVE))
