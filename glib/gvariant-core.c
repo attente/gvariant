@@ -290,7 +290,7 @@ g_variant_transition_independent (GVariant *value)
   g_variant_unref (value->contents.serialised.source);
   value->contents.serialised.source = NULL; /* valgrind */
 
-  return FALSE;
+  return TRUE;
 }
 
 static gboolean
