@@ -11,4 +11,5 @@ TEST_PROGS     += gvariant-markup
 TEST_PROGS     += gvariant-objpath
 TEST_PROGS     += gvariant-random
 TEST_PROGS     += gvariant-serialiser
+TEST_PROGS     += gvariant-signature
 TEST_PROGS     += gvariant-varargs

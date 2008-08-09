@@ -1,8 +1,6 @@
 #include <glib.h>
 #include <glib/gvariant.h>
 
-#define VERBOSE
-
 #define TESTS              1024
 #define MAX_ERRORS            2
 #define MAX_ELEMENTS         20
